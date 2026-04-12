@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface CorpusOption {
 	id: string;
@@ -14,7 +14,39 @@ interface CorpusPickerProps {
 
 export function CorpusPicker({ active, options, onSelect, className = "" }: CorpusPickerProps) {
 	const [open, setOpen] = useState(false);
+	const rootRef = useRef<HTMLDivElement>(null);
 	const activeLabel = options.find((option) => option.id === active)?.label ?? active;
+
+	useEffect(() => {
+		if (!open) return;
+
+		function handleKeyDown(e: KeyboardEvent) {
+			if (e.key === "Escape") {
+				setOpen(false);
+			}
+		}
+
+		function handlePointerDown(e: MouseEvent) {
+			if (!rootRef.current?.contains(e.target as Node)) {
+				setOpen(false);
+			}
+		}
+
+		function handleFocusIn(e: FocusEvent) {
+			if (!rootRef.current?.contains(e.target as Node)) {
+				setOpen(false);
+			}
+		}
+
+		document.addEventListener("mousedown", handlePointerDown);
+		document.addEventListener("focusin", handleFocusIn);
+		window.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("mousedown", handlePointerDown);
+			document.removeEventListener("focusin", handleFocusIn);
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [open]);
 
 	function select(id: string) {
 		onSelect(id);
@@ -22,7 +54,7 @@ export function CorpusPicker({ active, options, onSelect, className = "" }: Corp
 	}
 
 	return (
-		<div className={className}>
+		<div ref={rootRef} className={className}>
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}

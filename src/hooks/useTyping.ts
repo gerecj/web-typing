@@ -14,6 +14,16 @@ interface UseTypingOptions {
 	durationSec?: number;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) return false;
+	return (
+		target.isContentEditable ||
+		target instanceof HTMLInputElement ||
+		target instanceof HTMLTextAreaElement ||
+		target instanceof HTMLSelectElement
+	);
+}
+
 export function useTyping(words: string[], numWords: number, options?: UseTypingOptions) {
 	const mode = options?.mode ?? "words";
 	const durationMs = (options?.durationSec ?? 30) * 1000;
@@ -31,16 +41,19 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		dispatch({ type: "RESET", text: buildTypingText(words, numWords) });
 	}, [words, numWords]);
 
-	// Re-generate test when words/numWords change
+	// Rebuild the test text when corpus selection or word count changes.
 	useEffect(() => {
 		if (words.length > 0) {
 			reset();
 		}
 	}, [words, numWords, reset]);
 
-	// Keyboard handler
+	// Global keyboard handling for typing input and reset shortcuts.
+	// We keep this listener stable and dispatch reducer actions only.
 	useEffect(() => {
 		function handleKeyDown(e: KeyboardEvent) {
+			if (isEditableTarget(e.target)) return;
+
 			if (e.key === "Tab") {
 				e.preventDefault();
 				reset();
@@ -68,6 +81,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 
 	const [nowMs, setNowMs] = useState(0);
 
+	// Time mode countdown loop. This drives the visible timer and auto-finish.
 	useEffect(() => {
 		if (mode !== "time") return;
 		if (state.startTime === null || state.status === "finished") return;

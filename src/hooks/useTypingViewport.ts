@@ -6,6 +6,12 @@ interface UseTypingViewportOptions {
 	cursorTransitionMs: number;
 }
 
+const WINDOW_REANCHOR_RATIO = 4;
+
+function getReanchorStartIndex(currentIndex: number, charWindow: number): number {
+	return Math.max(0, currentIndex - Math.floor(charWindow / WINDOW_REANCHOR_RATIO));
+}
+
 function findNextStartIndex(
 	lineStartIndices: number[],
 	currentIndex: number,
@@ -21,6 +27,22 @@ function findNextStartIndex(
 	}
 
 	return 0;
+}
+
+function updateLineStartIndices(
+	lineStartIndices: number[],
+	currentIndex: number,
+	advance: boolean,
+) {
+	if (advance) {
+		if (lineStartIndices[lineStartIndices.length - 1] !== currentIndex) {
+			lineStartIndices.push(currentIndex);
+		}
+		return;
+	}
+	if (lineStartIndices.length > 1) {
+		lineStartIndices.pop();
+	}
 }
 
 export function useTypingViewport(
@@ -53,6 +75,7 @@ export function useTypingViewport(
 		[typing.currentIndex],
 	);
 
+	// Reset viewport tracking whenever a new source text is generated.
 	useLayoutEffect(() => {
 		setStartIndex(0);
 		lineStartIndicesRef.current = [0];
@@ -60,6 +83,7 @@ export function useTypingViewport(
 		prevIndexRef.current = 0;
 	}, [typing.text]);
 
+	// Keep cursor position and rendered text window in sync with current typing index.
 	useLayoutEffect(() => {
 		const currentIndex = typing.currentIndex;
 		const previousIndex = prevIndexRef.current;
@@ -68,11 +92,7 @@ export function useTypingViewport(
 
 		// Safety fallback: if cursor falls out of the visible window, re-anchor.
 		if (currentIndex < startIndex || currentIndex >= startIndex + options.charWindow) {
-			const windowReanchorRatio = 4;
-			const nextStart = Math.max(
-				0,
-				currentIndex - Math.floor(options.charWindow / windowReanchorRatio),
-			);
+			const nextStart = getReanchorStartIndex(currentIndex, options.charWindow);
 			setStartIndex(nextStart);
 			lineStartIndicesRef.current = [nextStart];
 			cursorTopRef.current = 0;
@@ -91,14 +111,7 @@ export function useTypingViewport(
 			const advance = movedForward;
 			const lineStartIndices = lineStartIndicesRef.current;
 			const nextStart = findNextStartIndex(lineStartIndices, currentIndex, advance);
-
-			if (advance) {
-				if (lineStartIndices[lineStartIndices.length - 1] !== currentIndex) {
-					lineStartIndices.push(currentIndex);
-				}
-			} else if (lineStartIndices.length > 1) {
-				lineStartIndices.pop();
-			}
+			updateLineStartIndices(lineStartIndices, currentIndex, advance);
 
 			if (nextStart !== startIndex) {
 				setStartIndex(nextStart);

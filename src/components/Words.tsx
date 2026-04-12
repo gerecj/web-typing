@@ -25,13 +25,12 @@ export function Words({ typing }: WordsProps) {
 		charWindow: CHAR_WINDOW,
 		cursorTransitionMs: CURSOR_TRANSITION_MS,
 	});
-	const cursorClass =
-		typing.status === "idle"
-			? "absolute top-0 left-0 w-0.5 rounded-full bg-(--accent) animate-cursor-blink"
-			: "absolute top-0 left-0 w-0.5 rounded-full bg-(--accent)";
+	const cursorClass = `absolute top-0 left-0 w-0.5 rounded-full bg-(--accent) ${
+		typing.status === "idle" ? "animate-cursor-blink" : ""
+	}`;
 
 	return (
-		<div className="w-full max-w-3xl px-4">
+		<div className="w-full max-w-4xl px-4">
 			<div className="relative">
 				{/* Progress */}
 				<div className="absolute bottom-full left-1/2 mb-4 -translate-x-1/2 text-(--accent) text-2xl">
@@ -41,10 +40,7 @@ export function Words({ typing }: WordsProps) {
 				</div>
 
 				{/* Words */}
-				<div
-					className="wrap-break-word relative overflow-hidden whitespace-pre-wrap text-3xl leading-relaxed"
-					style={{ height: "calc(1.6em * 3)" }}
-				>
+				<div className="wrap-break-word relative h-[calc(3lh)] overflow-hidden whitespace-pre-wrap text-3xl leading-normal">
 					{renderChars.map(({ char, absoluteIndex }) => {
 						return (
 							<span
