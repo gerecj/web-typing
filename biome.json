@@ -37,6 +37,9 @@
 			},
 			"suspicious": {
 				"noArrayIndexKey": "off"
+			},
+			"nursery": {
+				"useSortedClasses": "warn"
 			}
 		}
 	},

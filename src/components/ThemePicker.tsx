@@ -15,7 +15,7 @@ export function ThemePicker() {
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="rounded-lg border border-(--text-muted)/30 bg-(--bg) px-3 py-1.5 text-sm text-(--text-muted) transition hover:text-(--text)"
+				className="rounded-lg border border-(--text-muted)/30 bg-(--bg) px-3 py-1.5 text-(--text-muted) text-sm transition hover:text-(--text)"
 			>
 				{active}
 			</button>

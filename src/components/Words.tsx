@@ -6,8 +6,7 @@ interface WordsProps {
 }
 
 const CHAR_WINDOW = 200;
-const WINDOW_REANCHOR_RATIO = 4;
-const CURSOR_TRANSITION_MS = 150;
+const CURSOR_TRANSITION_MS = 100;
 
 function findNextStartIndex(
 	lineStartIndices: number[],
@@ -57,6 +56,7 @@ export function Words({ typing }: WordsProps) {
 
 		// Safety fallback: if cursor falls out of the visible window, re-anchor.
 		if (currentIndex < startIndex || currentIndex >= startIndex + CHAR_WINDOW) {
+			const WINDOW_REANCHOR_RATIO = 4;
 			const nextStart = Math.max(0, currentIndex - Math.floor(CHAR_WINDOW / WINDOW_REANCHOR_RATIO));
 			setStartIndex(nextStart);
 			lineStartIndicesRef.current = [nextStart];
@@ -99,49 +99,53 @@ export function Words({ typing }: WordsProps) {
 	}, [startIndex, typing.currentIndex, typing.status, typing.text]);
 
 	return (
-		<div className="w-full max-w-3xl space-y-8 px-4">
-			{/* Progress */}
-			<div className="text-center text-xl text-(--accent)">
-				{typing.typedWords}/{typing.numWords}
-			</div>
+		<div className="w-full max-w-3xl px-4">
+			<div className="relative">
+				{/* Progress */}
+				<div className="absolute bottom-full left-1/2 mb-4 -translate-x-1/2 text-(--accent) text-xl">
+					{typing.typedWords}/{typing.numWords}
+				</div>
 
-			{/* Words */}
-			<div
-				className="relative overflow-hidden text-2xl leading-relaxed whitespace-pre-wrap wrap-break-word"
-				style={{ height: "calc(1.6em * 3)" }}
-			>
-				{renderChars.map(({ char, absoluteIndex }) => {
-					let className = "text-(--text-muted)";
-					if (absoluteIndex < typing.currentIndex) {
-						className = typing.correctKeys[absoluteIndex] ? "text-(--text)" : "text-(--text-error)";
-						if (typing.wordCorrectness[absoluteIndex] === false) {
-							className +=
-								" underline decoration-(--error-decoration) decoration-[1.5px] underline-offset-3";
+				{/* Words */}
+				<div
+					className="wrap-break-word relative overflow-hidden whitespace-pre-wrap text-2xl leading-relaxed"
+					style={{ height: "calc(1.6em * 3)" }}
+				>
+					{renderChars.map(({ char, absoluteIndex }) => {
+						let className = "text-(--text-muted)";
+						if (absoluteIndex < typing.currentIndex) {
+							className = typing.correctKeys[absoluteIndex]
+								? "text-(--text)"
+								: "text-(--text-error)";
+							if (typing.wordCorrectness[absoluteIndex] === false) {
+								className +=
+									" underline decoration-(--error-decoration) decoration-[1.5px] underline-offset-2";
+							}
 						}
-					}
-					return (
-						<span
-							key={`${absoluteIndex}-${char}`}
-							ref={absoluteIndex === typing.currentIndex ? currentCharRef : undefined}
-							className={className}
-						>
-							{char}
-						</span>
-					);
-				})}
+						return (
+							<span
+								key={`${absoluteIndex}-${char}`}
+								ref={absoluteIndex === typing.currentIndex ? currentCharRef : undefined}
+								className={className}
+							>
+								{char}
+							</span>
+						);
+					})}
 
-				{/* Cursor */}
-				{typing.status !== "finished" && (
-					<span ref={cursorRef} className="absolute top-0 left-0 w-0.5 bg-(--accent)" />
-				)}
+					{/* Cursor */}
+					{typing.status !== "finished" && (
+						<span ref={cursorRef} className="absolute top-0 left-0 w-0.5 bg-(--accent)" />
+					)}
+				</div>
 			</div>
 
 			{/* Results */}
 			{typing.status === "finished" && (
-				<div className="space-y-2 text-center text-(--text)">
-					<div className="text-4xl font-bold">WPM: {typing.wpm}</div>
+				<div className="mt-6 space-y-2 text-center text-(--text)">
+					<div className="font-bold text-4xl">WPM: {typing.wpm}</div>
 					<div className="text-2xl">Accuracy: {typing.accuracy}%</div>
-					<div className="mt-4 text-sm text-(--text-muted)">Press Tab to restart</div>
+					<div className="mt-4 text-(--text-muted) text-sm">Press Tab to restart</div>
 				</div>
 			)}
 		</div>
