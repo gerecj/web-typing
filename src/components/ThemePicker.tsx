@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { controlStyles } from "../lib/controlStyles";
 import { applyTheme, getStoredTheme, themes } from "../themes";
 
 interface ThemePickerProps {
@@ -14,7 +15,11 @@ export function ThemePicker({ className = "" }: ThemePickerProps) {
 		if (!open) return;
 
 		function handleKeyDown(e: KeyboardEvent) {
-			if (e.key === "Escape") {
+			if (
+				e.key === "Escape" ||
+				e.key === "Backspace" ||
+				(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey)
+			) {
 				setOpen(false);
 			}
 		}
@@ -47,23 +52,28 @@ export function ThemePicker({ className = "" }: ThemePickerProps) {
 	}
 
 	return (
-		<div ref={rootRef} className={className}>
+		<div ref={rootRef} className={`${controlStyles.group} ${className}`.trim()}>
 			<button
 				type="button"
-				onClick={() => setOpen(!open)}
-				className="rounded-lg border border-(--text-muted)/30 bg-(--bg) px-3 py-1.5 text-(--text-muted) text-sm transition hover:text-(--text)"
+				onClick={(e) => {
+					setOpen(!open);
+					e.currentTarget.blur();
+				}}
+				className={controlStyles.trigger}
 			>
 				{active}
 			</button>
 
 			{open && (
-				<div className="absolute right-0 mt-2 flex flex-col gap-1 whitespace-nowrap rounded-lg border border-(--text-muted)/20 bg-(--bg) p-2 shadow-lg">
+				<div className={controlStyles.menu}>
 					{Object.keys(themes).map((name) => (
 						<button
 							key={name}
 							type="button"
 							onClick={() => select(name)}
-							className={`flex items-center gap-3 rounded-md px-3 py-1.5 text-left text-sm transition hover:bg-(--text-muted)/10 ${name === active ? "text-(--accent)" : "text-(--text-muted)"}`}
+							className={`${controlStyles.menuItemBase} flex items-center gap-3 ${
+								name === active ? "text-(--accent)" : "text-(--text-muted)"
+							}`}
 						>
 							<span className="flex gap-1">
 								{["--bg", "--text", "--accent", "--text-error"].map((key) => (

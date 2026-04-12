@@ -14,7 +14,7 @@ function getCharacterClass(typing: ReturnType<typeof useTyping>, absoluteIndex: 
 		className = typing.correctKeys[absoluteIndex] ? "text-(--text)" : "text-(--text-error)";
 		if (typing.wordCorrectness[absoluteIndex] === false) {
 			className +=
-				" underline decoration-(--error-decoration) decoration-[1.5px] underline-offset-2";
+				" underline decoration-(--error-decoration) decoration-[1.5px] underline-offset-3";
 		}
 	}
 	return className;

@@ -2,10 +2,9 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-// import Footer from "../components/Footer";
-// import Header from "../components/Header";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
+import { themes } from "../themes";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
@@ -15,11 +14,19 @@ interface MyRouterContext {
 const THEME_INIT_SCRIPT = `
 	(function(){
 		try {
-			var s=localStorage.getItem('theme-vars');
-			if(s) {
-				var v=JSON.parse(s);
-				var r=document.documentElement;
-				for(var k in v) r.style.setProperty(k,v[k])
+			var nameKey='typing-theme';
+			var varsKey='theme-vars';
+			var all=${JSON.stringify(themes)};
+			var r=document.documentElement;
+			var storedName=localStorage.getItem(nameKey);
+			var varsRaw=localStorage.getItem(varsKey);
+			var vars=varsRaw ? JSON.parse(varsRaw) : null;
+			if(!vars && storedName && all[storedName]) {
+				vars=all[storedName];
+			}
+			if(vars) {
+				for(var k in vars) r.style.setProperty(k, vars[k]);
+				localStorage.setItem(varsKey, JSON.stringify(vars));
 			}
 		}catch(e){}
 	})();
@@ -36,7 +43,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "Typing",
 			},
 		],
 		links: [
@@ -57,10 +64,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
-			<body className="wrap-anywhere font-sans antialiased selection:bg-[rgba(79,184,178,0.24)]">
-				{/* <Header /> */}
+			<body className="wrap-anywhere antialiased">
 				{children}
-				{/* <Footer /> */}
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",
