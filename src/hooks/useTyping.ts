@@ -4,6 +4,7 @@ import {
 	calculateAccuracy,
 	calculateWPM,
 	computeWordCorrectness,
+	countCorrectWords,
 	countTypedWords,
 } from "../lib/typing-metrics";
 import { buildTypingText } from "../lib/typing-text-provider";
@@ -73,6 +74,7 @@ export function useTyping(words: string[], numWords: number) {
 	const accuracy = calculateAccuracy(state.totalInputs, state.correctInputs);
 
 	const typedWords = countTypedWords(state.text, currentIndex);
+	const correctWords = countCorrectWords(state.text, wordCorrectness);
 
 	return {
 		text: state.text,
@@ -84,6 +86,7 @@ export function useTyping(words: string[], numWords: number) {
 		wpm,
 		accuracy,
 		typedWords,
+		correctWords,
 		numWords,
 		reset,
 	};

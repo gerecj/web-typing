@@ -138,6 +138,9 @@ export function Words({ typing }: WordsProps) {
 						<span ref={cursorRef} className="absolute top-0 left-0 w-0.5 bg-(--accent)" />
 					)}
 				</div>
+				<div className="pointer-events-none absolute top-full left-0 mt-4 text-(--text-muted) text-xs">
+					debug correct words: {typing.correctWords}
+				</div>
 			</div>
 
 			{/* Results */}

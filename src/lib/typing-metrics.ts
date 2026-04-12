@@ -44,3 +44,24 @@ export function countTypedWords(text: string, currentIndex: number): number {
 	const spaces = (typed.match(/ /g) || []).length;
 	return currentIndex >= text.length ? spaces + 1 : spaces;
 }
+
+export function countCorrectWords(text: string, wordCorrectness: (boolean | null)[]): number {
+	let correctWords = 0;
+	let wordStart = 0;
+
+	for (let i = 0; i <= text.length; i++) {
+		if (i === text.length || text[i] === " ") {
+			const wordStatuses = wordCorrectness.slice(wordStart, i);
+			const finished = wordStatuses.length > 0 && wordStatuses.every((status) => status !== null);
+			const allCorrect = finished && wordStatuses.every((status) => status === true);
+
+			if (allCorrect) {
+				correctWords++;
+			}
+
+			wordStart = i + 1;
+		}
+	}
+
+	return correctWords;
+}

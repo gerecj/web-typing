@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { applyTheme, getStoredTheme, themes } from "../themes";
 
-export function ThemePicker() {
+interface ThemePickerProps {
+	className?: string;
+}
+
+export function ThemePicker({ className = "" }: ThemePickerProps) {
 	const [active, setActive] = useState(getStoredTheme);
 	const [open, setOpen] = useState(false);
 
@@ -11,7 +15,7 @@ export function ThemePicker() {
 	}
 
 	return (
-		<div className="absolute top-4 right-4">
+		<div className={className}>
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
