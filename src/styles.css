@@ -7,6 +7,14 @@
 }
 
 :root {
+  /* Typing app theme defaults (Serika Dark) */
+  --bg: #323437;
+  --text: #d1d0c5;
+  --text-muted: #646669;
+  --text-error: #ca4754;
+  --accent: #e2b714;
+  --error-decoration: #ca4754;
+
   --sea-ink: #173a40;
   --sea-ink-soft: #416166;
   --lagoon: #4fb8b2;
