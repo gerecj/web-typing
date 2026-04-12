@@ -18,7 +18,7 @@ const CORPORA: Array<CorpusOption & { path: string }> = [
 ];
 
 const NUM_WORDS = 400;
-const DURATION_SEC = 30;
+const DURATION_SEC = 150;
 
 export const Route = createFileRoute("/typing")({ component: TypingPage });
 

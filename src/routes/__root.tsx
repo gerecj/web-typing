@@ -12,7 +12,18 @@ interface MyRouterContext {
 }
 
 // Apply stored theme before paint to prevent flash
-const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem('theme-vars');if(s){var v=JSON.parse(s);var r=document.documentElement;for(var k in v)r.style.setProperty(k,v[k])}}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `
+	(function(){
+		try {
+			var s=localStorage.getItem('theme-vars');
+			if(s) {
+				var v=JSON.parse(s);
+				var r=document.documentElement;
+				for(var k in v) r.style.setProperty(k,v[k])
+			}
+		}catch(e){}
+	})();
+`;
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	head: () => ({
