@@ -5,7 +5,26 @@ interface WordsProps {
 	typing: ReturnType<typeof useTyping>;
 }
 
-const CHAR_WINDOW = 150;
+const CHAR_WINDOW = 200;
+const WINDOW_REANCHOR_RATIO = 4;
+const CURSOR_TRANSITION_MS = 150;
+
+function findNextStartIndex(
+	lineStartIndices: number[],
+	currentIndex: number,
+	advance: boolean,
+): number {
+	for (let i = lineStartIndices.length - 1; i >= 0; i--) {
+		if (lineStartIndices[i] <= currentIndex) {
+			if (advance || lineStartIndices[i - 1] === undefined) {
+				return lineStartIndices[i];
+			}
+			return lineStartIndices[i - 1];
+		}
+	}
+
+	return 0;
+}
 
 export function Words({ typing }: WordsProps) {
 	const currentCharRef = useRef<HTMLSpanElement>(null);
@@ -38,7 +57,7 @@ export function Words({ typing }: WordsProps) {
 
 		// Safety fallback: if cursor falls out of the visible window, re-anchor.
 		if (currentIndex < startIndex || currentIndex >= startIndex + CHAR_WINDOW) {
-			const nextStart = Math.max(0, currentIndex - Math.floor(CHAR_WINDOW / 3));
+			const nextStart = Math.max(0, currentIndex - Math.floor(CHAR_WINDOW / WINDOW_REANCHOR_RATIO));
 			setStartIndex(nextStart);
 			lineStartIndicesRef.current = [nextStart];
 			cursorTopRef.current = 0;
@@ -56,18 +75,7 @@ export function Words({ typing }: WordsProps) {
 		if (char.offsetTop !== cursorTopRef.current && (movedForward || movedBackward)) {
 			const advance = movedForward;
 			const lineStartIndices = lineStartIndicesRef.current;
-			let nextStart = 0;
-
-			for (let i = lineStartIndices.length - 1; i >= 0; i--) {
-				if (lineStartIndices[i] <= currentIndex) {
-					if (advance || lineStartIndices[i - 1] === undefined) {
-						nextStart = lineStartIndices[i];
-					} else {
-						nextStart = lineStartIndices[i - 1];
-					}
-					break;
-				}
-			}
+			const nextStart = findNextStartIndex(lineStartIndices, currentIndex, advance);
 
 			if (advance) {
 				if (lineStartIndices[lineStartIndices.length - 1] !== currentIndex) {
@@ -82,8 +90,9 @@ export function Words({ typing }: WordsProps) {
 			}
 		}
 
-		cursor.style.left = `${char.offsetLeft}px`;
-		cursor.style.top = `${char.offsetTop}px`;
+		cursor.style.transition =
+			movedForward || movedBackward ? `transform ${CURSOR_TRANSITION_MS}ms linear` : "none";
+		cursor.style.transform = `translate(${char.offsetLeft}px, ${char.offsetTop}px)`;
 		cursor.style.height = `${char.offsetHeight}px`;
 		cursorTopRef.current = char.offsetTop;
 		prevIndexRef.current = currentIndex;
@@ -123,10 +132,7 @@ export function Words({ typing }: WordsProps) {
 
 				{/* Cursor */}
 				{typing.status !== "finished" && (
-					<span
-						ref={cursorRef}
-						className="absolute w-0.5 bg-(--accent) transition-all duration-100"
-					/>
+					<span ref={cursorRef} className="absolute top-0 left-0 w-0.5 bg-(--accent)" />
 				)}
 			</div>
 

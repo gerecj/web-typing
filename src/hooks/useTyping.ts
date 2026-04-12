@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 
 // --- Types ---
 
@@ -155,16 +155,16 @@ export function useTyping(words: string[], numWords: number) {
 		}),
 	);
 
-	const reset = () => {
+	const reset = useCallback(() => {
 		dispatch({ type: "RESET", text: shuffleWords(words, numWords) });
-	};
+	}, [words, numWords]);
 
 	// Re-generate test when words/numWords change
 	useEffect(() => {
 		if (words.length > 0) {
 			reset();
 		}
-	}, [words, numWords]);
+	}, [words, numWords, reset]);
 
 	// Keyboard handler
 	useEffect(() => {
