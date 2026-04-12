@@ -1,6 +1,18 @@
-Welcome to your new TanStack Start app! 
+Welcome to your new TanStack Start app!
 
 # Getting Started
+
+To update dependencies:
+
+```bash
+pnpm update
+```
+
+Migrate biome to the latest version:
+
+```bash
+pnpm biome migrate --write
+```
 
 To run this application:
 
@@ -42,14 +54,11 @@ If you prefer not to use Tailwind CSS:
 
 This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
 
-
 ```bash
 pnpm lint
 pnpm format
 pnpm check
 ```
-
-
 
 ## Routing
 
