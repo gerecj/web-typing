@@ -12,6 +12,7 @@ import { buildTypingText } from "../lib/typing-text-provider";
 interface UseTypingOptions {
 	mode?: "words" | "time";
 	durationSec?: number;
+	textProvider?: () => string;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -27,19 +28,19 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function useTyping(words: string[], numWords: number, options?: UseTypingOptions) {
 	const mode = options?.mode ?? "words";
 	const durationMs = (options?.durationSec ?? 30) * 1000;
-
-	const [state, dispatch] = useReducer(
-		typingReducer,
-		{ words, numWords },
-		({ words, numWords }) => ({
-			...initialTypingState,
-			text: buildTypingText(words, numWords),
-		}),
+	const buildText = useCallback(
+		() => options?.textProvider?.() ?? buildTypingText(words, numWords),
+		[options?.textProvider, words, numWords],
 	);
 
+	const [state, dispatch] = useReducer(typingReducer, { words, numWords }, () => ({
+		...initialTypingState,
+		text: buildText(),
+	}));
+
 	const reset = useCallback(() => {
-		dispatch({ type: "RESET", text: buildTypingText(words, numWords) });
-	}, [words, numWords]);
+		dispatch({ type: "RESET", text: buildText() });
+	}, [buildText]);
 
 	// Rebuild the test text when corpus selection or word count changes.
 	useEffect(() => {
@@ -115,6 +116,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 
 	const typedWords = countTypedWords(state.text, currentIndex);
 	const correctWords = countCorrectWords(state.text, wordCorrectness);
+	const totalWords = state.text.length === 0 ? 0 : state.text.split(" ").length;
 	const elapsedTimeMs =
 		mode === "time" && state.startTime !== null
 			? Math.max(
@@ -135,6 +137,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		wpm,
 		accuracy,
 		typedWords,
+		totalWords,
 		correctWords,
 		numWords,
 		mode,

@@ -36,7 +36,7 @@ export function Words({ typing }: WordsProps) {
 				<div className="absolute bottom-full left-1/2 mb-4 -translate-x-1/2 text-(--accent) text-2xl">
 					{typing.mode === "time"
 						? `${Math.max(0, Math.ceil(typing.timeLeftMs / 1000))}`
-						: `${typing.typedWords}/${typing.numWords}`}
+						: `${typing.typedWords}/${typing.totalWords}`}
 				</div>
 
 				{/* Words */}
@@ -64,8 +64,14 @@ export function Words({ typing }: WordsProps) {
 			{/* Results */}
 			{typing.status === "finished" && (
 				<div className="mt-6 space-y-2 text-center text-(--text)">
-					<div className="font-bold text-5xl">WPM: {typing.wpm}</div>
-					<div className="text-3xl">Accuracy: {typing.accuracy}%</div>
+					<div className="font-bold text-4xl">
+						<span>WPM: </span>
+						<span className="text-(--accent)">{typing.wpm}</span>
+					</div>
+					<div className="text-3xl">
+						<span>Accuracy: </span>
+						<span className="text-(--accent)">{typing.accuracy}%</span>
+					</div>
 					<div className="mt-4 text-(--text-muted) text-base">Press Tab to restart</div>
 				</div>
 			)}
