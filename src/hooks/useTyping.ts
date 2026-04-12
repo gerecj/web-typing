@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { initialTypingState, typingReducer } from "../lib/typing-engine";
 import {
 	calculateAccuracy,
@@ -9,9 +9,15 @@ import {
 } from "../lib/typing-metrics";
 import { buildTypingText } from "../lib/typing-text-provider";
 
-// --- Hook ---
+interface UseTypingOptions {
+	mode?: "words" | "time";
+	durationSec?: number;
+}
 
-export function useTyping(words: string[], numWords: number) {
+export function useTyping(words: string[], numWords: number, options?: UseTypingOptions) {
+	const mode = options?.mode ?? "words";
+	const durationMs = (options?.durationSec ?? 30) * 1000;
+
 	const [state, dispatch] = useReducer(
 		typingReducer,
 		{ words, numWords },
@@ -60,6 +66,26 @@ export function useTyping(words: string[], numWords: number) {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [reset]);
 
+	const [nowMs, setNowMs] = useState(0);
+
+	useEffect(() => {
+		if (mode !== "time") return;
+		if (state.startTime === null || state.status === "finished") return;
+		const startTime = state.startTime;
+
+		const interval = window.setInterval(() => {
+			const now = performance.now();
+			setNowMs(now);
+
+			if (now - startTime >= durationMs) {
+				dispatch({ type: "FINISH", time: startTime + durationMs });
+				window.clearInterval(interval);
+			}
+		}, 50);
+
+		return () => window.clearInterval(interval);
+	}, [durationMs, mode, state.startTime, state.status]);
+
 	// Derived values
 	const currentIndex = state.input.length;
 
@@ -75,6 +101,15 @@ export function useTyping(words: string[], numWords: number) {
 
 	const typedWords = countTypedWords(state.text, currentIndex);
 	const correctWords = countCorrectWords(state.text, wordCorrectness);
+	const elapsedTimeMs =
+		mode === "time" && state.startTime !== null
+			? Math.max(
+					0,
+					(state.status === "finished" && state.endTime !== null ? state.endTime : nowMs) -
+						state.startTime,
+				)
+			: 0;
+	const timeLeftMs = mode === "time" ? Math.max(0, durationMs - elapsedTimeMs) : durationMs;
 
 	return {
 		text: state.text,
@@ -88,6 +123,9 @@ export function useTyping(words: string[], numWords: number) {
 		typedWords,
 		correctWords,
 		numWords,
+		mode,
+		timeLeftMs,
+		durationMs,
 		reset,
 	};
 }

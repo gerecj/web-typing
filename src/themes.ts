@@ -97,6 +97,10 @@ export function applyTheme(name: string) {
 }
 
 export function getStoredTheme(): string {
+	if (typeof window === "undefined") {
+		return "serikaDark";
+	}
+
 	const stored = localStorage.getItem(THEME_NAME_KEY);
 	if (stored && stored in themes) {
 		return stored;

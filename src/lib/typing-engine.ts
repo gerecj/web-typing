@@ -14,6 +14,7 @@ export type TypingAction =
 	| { type: "CHAR"; key: string; time: number }
 	| { type: "BACKSPACE" }
 	| { type: "CTRL_BACKSPACE" }
+	| { type: "FINISH"; time: number }
 	| { type: "RESET"; text: string };
 
 export const initialTypingState: TypingState = {
@@ -67,6 +68,17 @@ export function typingReducer(state: TypingState, action: TypingAction): TypingS
 			return {
 				...state,
 				input: state.input.replace(/\S+\s*$/, ""),
+			};
+		}
+
+		case "FINISH": {
+			if (state.status === "finished") return state;
+			if (state.startTime === null) return state;
+
+			return {
+				...state,
+				endTime: action.time,
+				status: "finished",
 			};
 		}
 	}

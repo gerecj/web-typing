@@ -17,7 +17,8 @@ const CORPORA: Array<CorpusOption & { path: string }> = [
 	{ id: "slovak_10k", label: "Slovak 10K", path: "/corpora/slovak_10k.json" },
 ];
 
-const NUM_WORDS = 100;
+const NUM_WORDS = 400;
+const DURATION_SEC = 30;
 
 export const Route = createFileRoute("/typing")({ component: TypingPage });
 
@@ -28,7 +29,7 @@ function TypingPage() {
 		return CORPORA.some((corpus) => corpus.id === stored) ? (stored as string) : DEFAULT_CORPUS;
 	});
 	const [words, setWords] = useState<string[]>(FALLBACK_WORDS);
-	const typing = useTyping(words, NUM_WORDS);
+	const typing = useTyping(words, NUM_WORDS, { mode: "time", durationSec: DURATION_SEC });
 
 	useEffect(() => {
 		const controller = new AbortController();
