@@ -1,32 +1,93 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { useTyping } from "../hooks/useTyping";
 
 interface WordsProps {
 	typing: ReturnType<typeof useTyping>;
 }
 
+const CHAR_WINDOW = 150;
+
 export function Words({ typing }: WordsProps) {
 	const currentCharRef = useRef<HTMLSpanElement>(null);
 	const cursorRef = useRef<HTMLSpanElement>(null);
+	const lineStartIndicesRef = useRef<number[]>([0]);
+	const cursorTopRef = useRef(0);
+	const prevIndexRef = useRef(0);
+	const [startIndex, setStartIndex] = useState(0);
+
+	const renderChars = typing.text
+		.slice(startIndex, startIndex + CHAR_WINDOW)
+		.split("")
+		.map((char, localIndex) => ({
+			char,
+			absoluteIndex: startIndex + localIndex,
+		}));
 
 	useLayoutEffect(() => {
+		setStartIndex(0);
+		lineStartIndicesRef.current = [0];
+		cursorTopRef.current = 0;
+		prevIndexRef.current = 0;
+	}, [typing.text]);
+
+	useLayoutEffect(() => {
+		const currentIndex = typing.currentIndex;
+		const previousIndex = prevIndexRef.current;
+		const movedForward = currentIndex > previousIndex;
+		const movedBackward = currentIndex < previousIndex;
+
+		// Safety fallback: if cursor falls out of the visible window, re-anchor.
+		if (currentIndex < startIndex || currentIndex >= startIndex + CHAR_WINDOW) {
+			const nextStart = Math.max(0, currentIndex - Math.floor(CHAR_WINDOW / 3));
+			setStartIndex(nextStart);
+			lineStartIndicesRef.current = [nextStart];
+			cursorTopRef.current = 0;
+			prevIndexRef.current = currentIndex;
+			return;
+		}
+
 		const char = currentCharRef.current;
 		const cursor = cursorRef.current;
-		if (!char || !cursor) return;
+		if (!char || !cursor) {
+			prevIndexRef.current = currentIndex;
+			return;
+		}
 
-		const container = char.parentElement;
-		if (container) {
-			const canScroll = container.scrollHeight - container.clientHeight;
-			const targetScroll = char.offsetTop - container.clientHeight / 2 + char.offsetHeight / 2;
-			if (targetScroll <= canScroll) {
-				char.scrollIntoView({ block: "center" });
+		if (char.offsetTop !== cursorTopRef.current && (movedForward || movedBackward)) {
+			const advance = movedForward;
+			const lineStartIndices = lineStartIndicesRef.current;
+			let nextStart = 0;
+
+			for (let i = lineStartIndices.length - 1; i >= 0; i--) {
+				if (lineStartIndices[i] <= currentIndex) {
+					if (advance || lineStartIndices[i - 1] === undefined) {
+						nextStart = lineStartIndices[i];
+					} else {
+						nextStart = lineStartIndices[i - 1];
+					}
+					break;
+				}
+			}
+
+			if (advance) {
+				if (lineStartIndices[lineStartIndices.length - 1] !== currentIndex) {
+					lineStartIndices.push(currentIndex);
+				}
+			} else if (lineStartIndices.length > 1) {
+				lineStartIndices.pop();
+			}
+
+			if (nextStart !== startIndex) {
+				setStartIndex(nextStart);
 			}
 		}
 
 		cursor.style.left = `${char.offsetLeft}px`;
 		cursor.style.top = `${char.offsetTop}px`;
 		cursor.style.height = `${char.offsetHeight}px`;
-	}, [typing.currentIndex, typing.text, typing.status]);
+		cursorTopRef.current = char.offsetTop;
+		prevIndexRef.current = currentIndex;
+	}, [startIndex, typing.currentIndex, typing.status, typing.text]);
 
 	return (
 		<div className="w-full max-w-3xl space-y-8 px-4">
@@ -40,19 +101,19 @@ export function Words({ typing }: WordsProps) {
 				className="relative overflow-hidden text-2xl leading-relaxed whitespace-pre-wrap wrap-break-word"
 				style={{ height: "calc(1.6em * 3)" }}
 			>
-				{typing.text.split("").map((char, i) => {
+				{renderChars.map(({ char, absoluteIndex }) => {
 					let className = "text-(--text-muted)";
-					if (i < typing.currentIndex) {
-						className = typing.correctKeys[i] ? "text-(--text)" : "text-(--text-error)";
-						if (typing.wordCorrectness[i] === false) {
+					if (absoluteIndex < typing.currentIndex) {
+						className = typing.correctKeys[absoluteIndex] ? "text-(--text)" : "text-(--text-error)";
+						if (typing.wordCorrectness[absoluteIndex] === false) {
 							className +=
 								" underline decoration-(--error-decoration) decoration-[1.5px] underline-offset-3";
 						}
 					}
 					return (
 						<span
-							key={`${i}-${char}`}
-							ref={i === typing.currentIndex ? currentCharRef : undefined}
+							key={`${absoluteIndex}-${char}`}
+							ref={absoluteIndex === typing.currentIndex ? currentCharRef : undefined}
 							className={className}
 						>
 							{char}

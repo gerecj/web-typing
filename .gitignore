@@ -1,13 +1,33 @@
+.playwright-cli/
+.playwright/
+
+# Dependencies
 node_modules
-.DS_Store
+/.pnp
+.pnp.js
+
+# TanStack / Vinxi / Nitro
+.tanstack
+.vinxi
+.output
+.nitro
 dist
 dist-ssr
-*.local
+/build
+/out
+
+# Environment Files
 .env
-.nitro
-.tanstack
-.wrangler
-.output
-.vinxi
-__unconfig*
-todos.json
+.env.development
+.env.production
+.env*.local
+*.local
+
+# Testing & Debug
+/coverage
+npm-debug.log*
+*.tsbuildinfo
+
+# OS / Misc
+.DS_Store
+*.pem

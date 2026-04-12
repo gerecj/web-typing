@@ -7,6 +7,10 @@ export interface Theme {
 	"--error-decoration": string;
 }
 
+const THEME_NAME_KEY = "typing-theme";
+const LEGACY_THEME_NAME_KEY = "theme";
+const THEME_VARS_KEY = "theme-vars";
+
 export const themes: Record<string, Theme> = {
 	serikaDark: {
 		"--bg": "#323437",
@@ -88,10 +92,20 @@ export function applyTheme(name: string) {
 	for (const [key, value] of Object.entries(theme)) {
 		document.documentElement.style.setProperty(key, value);
 	}
-	localStorage.setItem("theme", name);
-	localStorage.setItem("theme-vars", JSON.stringify(theme));
+	localStorage.setItem(THEME_NAME_KEY, name);
+	localStorage.setItem(THEME_VARS_KEY, JSON.stringify(theme));
 }
 
 export function getStoredTheme(): string {
-	return localStorage.getItem("theme") ?? "serikaDark";
+	const stored = localStorage.getItem(THEME_NAME_KEY);
+	if (stored && stored in themes) {
+		return stored;
+	}
+
+	const legacy = localStorage.getItem(LEGACY_THEME_NAME_KEY);
+	if (legacy && legacy in themes) {
+		return legacy;
+	}
+
+	return "serikaDark";
 }

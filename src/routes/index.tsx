@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -17,12 +17,12 @@ function App() {
 					essentials you need to build from scratch.
 				</p>
 				<div className="flex flex-wrap gap-3">
-					<a
-						href="/about"
+					<Link
+						to="/about"
 						className="rounded-full border border-[rgba(50,143,151,0.3)] bg-[rgba(79,184,178,0.14)] px-5 py-2.5 text-sm font-semibold text-(--lagoon-deep) no-underline transition hover:-translate-y-0.5 hover:bg-[rgba(79,184,178,0.24)]"
 					>
 						About This Starter
-					</a>
+					</Link>
 					<a
 						href="https://tanstack.com/router"
 						target="_blank"

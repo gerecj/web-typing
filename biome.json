@@ -8,12 +8,12 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
-			"**/src/**/*",
-			"**/.vscode/**/*",
-			"**/index.html",
-			"**/vite.config.ts",
-			"!**/src/routeTree.gen.ts",
-			"!**/src/styles.css"
+			"src/**/*",
+			".vscode/**/*",
+			"vite.config.ts",
+			"!src/routeTree.gen.ts",
+			"!src/styles.css",
+			"!.local/**/*"
 		]
 	},
 	"formatter": {
