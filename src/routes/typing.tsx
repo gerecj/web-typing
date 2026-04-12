@@ -5,6 +5,7 @@ import { ThemePicker } from "../components/ThemePicker";
 import { Words } from "../components/Words";
 import { useTyping } from "../hooks/useTyping";
 import { useTypingDebugGrid } from "../hooks/useTypingDebugGrid";
+import { buildTypingText } from "../lib/typing-text-provider";
 
 const FALLBACK_WORDS = ["the", "be", "to", "of", "and", "a", "in", "that", "have", "it"];
 const CORPUS_STORAGE_KEY = "typing-corpus";
@@ -61,6 +62,7 @@ export const Route = createFileRoute("/typing")({ component: TypingPage });
 function TypingPage() {
 	const { isDev, showDebugGrid } = useTypingDebugGrid();
 	const [preset, setPreset] = useState<TypingPreset>("time");
+	const [punctuationEnabled, setPunctuationEnabled] = useState(false);
 	const [timeOption, setTimeOption] = useState<TimeOption>(30);
 	const [wordsOption, setWordsOption] = useState<WordsOption>(30);
 	const [quoteOption, setQuoteOption] = useState<QuoteOption>("medium");
@@ -80,6 +82,10 @@ function TypingPage() {
 	const targetWordCount =
 		preset === "words" ? wordsOption : preset === "quote" ? QUOTE_WORD_COUNT[quoteOption] : 400;
 	const durationSec = preset === "time" ? timeOption : 30;
+	const wordsTextProvider = useCallback(
+		() => buildTypingText(words, targetWordCount, { enrichText: punctuationEnabled }),
+		[punctuationEnabled, targetWordCount, words],
+	);
 	const quoteTextProvider = useCallback(() => {
 		const selectedPool = quoteBuckets[quoteOption];
 		const picked = randomFrom(selectedPool) ?? randomFrom(allQuotes);
@@ -88,7 +94,7 @@ function TypingPage() {
 	const typing = useTyping(words, targetWordCount, {
 		mode,
 		durationSec,
-		textProvider: preset === "quote" ? quoteTextProvider : undefined,
+		textProvider: preset === "quote" ? quoteTextProvider : wordsTextProvider,
 	});
 
 	// Fetch the active corpus file whenever corpus selection changes.
@@ -201,6 +207,19 @@ function TypingPage() {
 	return (
 		<main className="relative flex min-h-screen select-none items-center justify-center bg-(--bg) font-mono">
 			<div className="absolute top-4 left-1/2 z-10 -translate-x-1/2">
+				<div className="absolute top-0 right-full mr-2 flex items-center gap-1 whitespace-nowrap rounded-lg border border-(--text-muted)/30 bg-(--bg) p-1">
+					<button
+						type="button"
+						onClick={() => setPunctuationEnabled((value) => !value)}
+						className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition ${
+							punctuationEnabled
+								? "bg-(--text-muted)/20 text-(--accent)"
+								: "text-(--text-muted) hover:bg-(--text-muted)/10 hover:text-(--text)"
+						}`}
+					>
+						punctuation
+					</button>
+				</div>
 				<div className="flex items-center gap-1 rounded-lg border border-(--text-muted)/30 bg-(--bg) p-1">
 					{(["time", "words", "quote"] as const).map((option) => {
 						return (
