@@ -15,7 +15,7 @@ const PUNCTUATION_STORAGE_KEY = "typing-punctuation";
 const TIME_OPTION_STORAGE_KEY = "typing-time-option";
 const WORDS_OPTION_STORAGE_KEY = "typing-words-option";
 const QUOTE_OPTION_STORAGE_KEY = "typing-quote-option";
-const DEFAULT_CORPUS = "english_1k";
+const DEFAULT_CORPUS = "english";
 const CORPORA: Array<CorpusOption & { path: string }> = [
 	{ id: "english", label: "English", path: "/corpora/english.json" },
 	{ id: "english_1k", label: "English 1K", path: "/corpora/english_1k.json" },
@@ -78,9 +78,9 @@ function TypingPage() {
 		return window.localStorage.getItem(PUNCTUATION_STORAGE_KEY) === "true";
 	});
 	const [timeOption, setTimeOption] = useState<TimeOption>(() => {
-		if (typeof window === "undefined") return 30;
+		if (typeof window === "undefined") return 15;
 		const stored = Number(window.localStorage.getItem(TIME_OPTION_STORAGE_KEY));
-		return TIME_OPTIONS.includes(stored as TimeOption) ? (stored as TimeOption) : 30;
+		return TIME_OPTIONS.includes(stored as TimeOption) ? (stored as TimeOption) : 15;
 	});
 	const [wordsOption, setWordsOption] = useState<WordsOption>(() => {
 		if (typeof window === "undefined") return 30;
