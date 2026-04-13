@@ -259,7 +259,7 @@ function TypingPage() {
 	return (
 		<main className="relative flex min-h-screen select-none items-center justify-center bg-(--bg) font-mono">
 			<div className="absolute top-4 left-1/2 z-10 -translate-x-1/2">
-				<div className={`absolute top-0 right-full mr-2 whitespace-nowrap ${controlStyles.group}`}>
+				<div className={`absolute top-0 right-full mr-4 whitespace-nowrap ${controlStyles.group}`}>
 					<button
 						type="button"
 						onClick={(e) => {
@@ -289,7 +289,7 @@ function TypingPage() {
 					})}
 				</div>
 				<div
-					className={`absolute top-0 left-full ml-2 flex-nowrap whitespace-nowrap ${controlStyles.group}`}
+					className={`absolute top-0 left-full ml-4 flex-nowrap whitespace-nowrap ${controlStyles.group}`}
 				>
 					{(preset === "quote" ? QUOTE_OPTIONS : TIME_OPTIONS).map((option) => {
 						const selected =
@@ -321,7 +321,7 @@ function TypingPage() {
 					})}
 				</div>
 			</div>
-			<div className="absolute top-16 left-1/2 z-10 flex -translate-x-1/2 items-start gap-2 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0">
+			<div className="absolute top-16 left-1/2 z-10 flex -translate-x-1/2 items-start gap-4 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0">
 				<CorpusPicker
 					active={activeCorpus}
 					options={CORPORA}

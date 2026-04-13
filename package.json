@@ -43,12 +43,17 @@
     "jsdom": "^28.1.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.8",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.81.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
       "lightningcss"
+    ],
+    "ignoredBuiltDependencies": [
+      "sharp",
+      "workerd"
     ]
   }
 }

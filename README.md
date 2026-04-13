@@ -29,6 +29,20 @@ To build this application for production:
 pnpm build
 ```
 
+## Cloudflare Preview & Deploy
+
+Preview locally with Worker-style static assets:
+
+```bash
+pnpm wrangler dev
+```
+
+Deploy to Cloudflare:
+
+```bash
+pnpm wrangler deploy
+```
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
