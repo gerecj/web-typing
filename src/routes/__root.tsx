@@ -43,6 +43,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
+				name: "theme-color",
+				content: "#282a36",
+			},
+			{
+				name: "color-scheme",
+				content: "dark",
+			},
+			{
 				title: "Web Typing",
 			},
 		],

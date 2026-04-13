@@ -7,12 +7,13 @@
 }
 
 :root {
-  --bg: #323437;
-  --text: #d1d0c5;
-  --text-muted: #646669;
-  --text-error: #ca4754;
-  --accent: #e2b714;
-  --error-decoration: #ca4754;
+  --bg: #282a36;
+  --text: #f8f8f2;
+  --text-muted: #6272a4;
+  --text-error: #ff5555;
+  --accent: #bd93f9;
+  --error-decoration: #ff5555;
+  color-scheme: dark;
 }
 
 * {

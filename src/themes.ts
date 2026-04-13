@@ -98,7 +98,7 @@ export function applyTheme(name: string) {
 
 export function getStoredTheme(): string {
 	if (typeof window === "undefined") {
-		return "serikaDark";
+		return "dracula";
 	}
 
 	const stored = localStorage.getItem(THEME_NAME_KEY);
@@ -111,5 +111,5 @@ export function getStoredTheme(): string {
 		return legacy;
 	}
 
-	return "serikaDark";
+	return "dracula";
 }
