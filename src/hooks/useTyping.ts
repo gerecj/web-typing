@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { initialTypingState, typingReducer } from "../lib/typing-engine";
 import {
 	calculateAccuracy,
@@ -13,25 +13,27 @@ interface UseTypingOptions {
 	mode?: "words" | "time";
 	durationSec?: number;
 	textProvider?: () => string;
+	enabled?: boolean;
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+function isInteractiveTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) return false;
 	return (
-		target.isContentEditable ||
-		target instanceof HTMLInputElement ||
-		target instanceof HTMLTextAreaElement ||
-		target instanceof HTMLSelectElement
+		target.closest(
+			"button, a[href], input, textarea, select, summary, [contenteditable], [role='button'], [role='link']",
+		) !== null
 	);
 }
 
 export function useTyping(words: string[], numWords: number, options?: UseTypingOptions) {
 	const mode = options?.mode ?? "words";
 	const durationMs = (options?.durationSec ?? 30) * 1000;
-	const buildText = useCallback(
-		() => options?.textProvider?.() ?? buildTypingText(words, numWords),
-		[options?.textProvider, words, numWords],
+	const enabled = options?.enabled ?? true;
+	const defaultTextProvider = useCallback(
+		() => buildTypingText(words, numWords),
+		[words, numWords],
 	);
+	const buildText = options?.textProvider ?? defaultTextProvider;
 
 	const [state, dispatch] = useReducer(typingReducer, { words, numWords }, () => ({
 		...initialTypingState,
@@ -42,18 +44,27 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		dispatch({ type: "RESET", text: buildText() });
 	}, [buildText]);
 
-	// Rebuild the test text when corpus selection or word count changes.
-	useEffect(() => {
-		if (words.length > 0) {
-			reset();
-		}
-	}, [words, numWords, reset]);
+	const previousConfigRef = useRef({ buildText, durationMs, enabled, mode });
 
-	// Global keyboard handling for typing input and reset shortcuts.
-	// We keep this listener stable and dispatch reducer actions only.
+	// Reset once when a usable typing configuration actually changes, never just because of mount.
+	useLayoutEffect(() => {
+		const previous = previousConfigRef.current;
+		const changed =
+			previous.buildText !== buildText ||
+			previous.durationMs !== durationMs ||
+			previous.enabled !== enabled ||
+			previous.mode !== mode;
+
+		previousConfigRef.current = { buildText, durationMs, enabled, mode };
+		if (enabled && changed) reset();
+	}, [buildText, durationMs, enabled, mode, reset]);
+
+	// Global keyboard handling for typing input and the restart shortcut.
 	useEffect(() => {
+		if (!enabled) return;
+
 		function handleKeyDown(e: KeyboardEvent) {
-			if (isEditableTarget(e.target)) return;
+			if (isInteractiveTarget(e.target)) return;
 
 			if (e.key === "Tab") {
 				e.preventDefault();
@@ -61,14 +72,16 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 				return;
 			}
 
-			if (e.ctrlKey) {
+			if (e.ctrlKey || e.metaKey) {
 				if (e.key === "Backspace") {
+					e.preventDefault();
 					dispatch({ type: "CTRL_BACKSPACE" });
 				}
 				return;
 			}
 
 			if (e.key === "Backspace") {
+				e.preventDefault();
 				dispatch({ type: "BACKSPACE" });
 			} else if (e.key.length === 1) {
 				e.preventDefault();
@@ -78,12 +91,13 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [reset]);
+	}, [enabled, reset]);
 
 	const [nowMs, setNowMs] = useState(0);
 
 	// Time mode countdown loop. This drives the visible timer and auto-finish.
 	useEffect(() => {
+		if (!enabled) return;
 		if (mode !== "time") return;
 		if (state.startTime === null || state.status === "finished") return;
 		const startTime = state.startTime;
@@ -99,7 +113,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		}, 50);
 
 		return () => window.clearInterval(interval);
-	}, [durationMs, mode, state.startTime, state.status]);
+	}, [durationMs, enabled, mode, state.startTime, state.status]);
 
 	// Derived values
 	const currentIndex = state.input.length;
@@ -141,6 +155,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		correctWords,
 		numWords,
 		mode,
+		enabled,
 		timeLeftMs,
 		durationMs,
 		reset,

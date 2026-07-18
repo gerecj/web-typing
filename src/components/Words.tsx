@@ -28,6 +28,7 @@ export function Words({ typing }: WordsProps) {
 	const cursorClass = `absolute top-0 left-0 w-0.5 rounded-full bg-(--accent) ${
 		typing.status === "idle" ? "animate-cursor-blink" : ""
 	}`;
+	if (!typing.enabled) return null;
 
 	return (
 		<div className="w-full max-w-4xl px-4">
@@ -72,7 +73,16 @@ export function Words({ typing }: WordsProps) {
 						<span>Accuracy: </span>
 						<span className="text-(--accent)">{typing.accuracy}%</span>
 					</div>
-					<div className="mt-4 text-(--text-muted) text-base">Press Tab to restart</div>
+					<div className="mt-4 text-(--text-muted) text-base">
+						<span>Press Tab to </span>
+						<button
+							type="button"
+							onClick={typing.reset}
+							className="rounded-sm underline underline-offset-4 transition hover:text-(--text) focus-visible:outline-(--accent) focus-visible:outline-2 focus-visible:outline-offset-4"
+						>
+							restart
+						</button>
+					</div>
 				</div>
 			)}
 		</div>

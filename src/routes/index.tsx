@@ -55,6 +55,17 @@ interface QuotePayload {
 	quotes?: QuoteItem[];
 }
 
+interface LoadedWords {
+	corpusId: string;
+	words: string[];
+}
+
+interface LoadedQuotes {
+	path: string;
+	buckets: Record<QuoteOption, string[]>;
+	all: string[];
+}
+
 function randomFrom<T>(items: T[]): T | null {
 	if (items.length === 0) return null;
 	return items[Math.floor(Math.random() * items.length)] ?? null;
@@ -97,14 +108,14 @@ function TypingPage() {
 		const stored = window.localStorage.getItem(CORPUS_STORAGE_KEY);
 		return CORPORA.some((corpus) => corpus.id === stored) ? (stored as string) : DEFAULT_CORPUS;
 	});
-	const [words, setWords] = useState<string[]>(FALLBACK_WORDS);
-	const [quoteBuckets, setQuoteBuckets] = useState<Record<QuoteOption, string[]>>({
-		short: [],
-		medium: [],
-		long: [],
-	});
-	const [allQuotes, setAllQuotes] = useState<string[]>([]);
+	const [loadedWords, setLoadedWords] = useState<LoadedWords | null>(null);
+	const [loadedQuotes, setLoadedQuotes] = useState<LoadedQuotes | null>(null);
+	const quotePath = getQuotePathForCorpus(activeCorpus);
+	const wordsReady = loadedWords?.corpusId === activeCorpus;
+	const quotesReady = loadedQuotes?.path === quotePath;
+	const words = wordsReady ? loadedWords.words : [];
 	const mode = preset === "time" ? "time" : "words";
+	const typingReady = preset === "quote" ? quotesReady : wordsReady;
 	const targetWordCount =
 		preset === "words" ? wordsOption : preset === "quote" ? QUOTE_WORD_COUNT[quoteOption] : 400;
 	const durationSec = preset === "time" ? timeOption : 30;
@@ -113,14 +124,16 @@ function TypingPage() {
 		[punctuationEnabled, targetWordCount, words],
 	);
 	const quoteTextProvider = useCallback(() => {
-		const selectedPool = quoteBuckets[quoteOption];
-		const picked = randomFrom(selectedPool) ?? randomFrom(allQuotes);
+		const availableQuotes = loadedQuotes?.path === quotePath ? loadedQuotes : null;
+		const selectedPool = availableQuotes?.buckets[quoteOption] ?? [];
+		const picked = randomFrom(selectedPool) ?? randomFrom(availableQuotes?.all ?? []);
 		return picked ?? FALLBACK_WORDS.join(" ");
-	}, [allQuotes, quoteBuckets, quoteOption]);
+	}, [loadedQuotes, quoteOption, quotePath]);
 	const typing = useTyping(words, targetWordCount, {
 		mode,
 		durationSec,
 		textProvider: preset === "quote" ? quoteTextProvider : wordsTextProvider,
+		enabled: typingReady,
 	});
 
 	// Fetch the active corpus file whenever corpus selection changes.
@@ -138,15 +151,15 @@ function TypingPage() {
 				const data = (await response.json()) as { words?: unknown };
 				if (Array.isArray(data.words) && data.words.every((word) => typeof word === "string")) {
 					if (!cancelled) {
-						setWords(data.words);
+						setLoadedWords({ corpusId: activeCorpus, words: data.words });
 					}
 					return;
 				}
 				throw new Error(`Invalid corpus payload for '${corpus.id}'`);
 			} catch (error) {
-				if (!cancelled) {
-					setWords(FALLBACK_WORDS);
-				}
+				if (cancelled || controller.signal.aborted) return;
+
+				setLoadedWords({ corpusId: activeCorpus, words: FALLBACK_WORDS });
 				if (import.meta.env.DEV) {
 					console.warn("[typing] Corpus load failed, using fallback words.", error);
 				}
@@ -162,10 +175,10 @@ function TypingPage() {
 
 	// Load quote data for the active corpus language and split into short/medium/long pools.
 	useEffect(() => {
+		if (preset !== "quote" || loadedQuotes?.path === quotePath) return;
+
 		const controller = new AbortController();
 		let cancelled = false;
-		const quotePath = getQuotePathForCorpus(activeCorpus);
-
 		async function loadQuotes() {
 			try {
 				const response = await fetch(quotePath, { signal: controller.signal });
@@ -198,17 +211,19 @@ function TypingPage() {
 				}
 
 				if (!cancelled) {
-					setAllQuotes(all);
-					setQuoteBuckets(nextBuckets);
+					setLoadedQuotes({ path: quotePath, buckets: nextBuckets, all });
 				}
 			} catch (error) {
+				if (cancelled || controller.signal.aborted) return;
+
 				if (import.meta.env.DEV) {
 					console.warn(`[typing] Quote load failed for ${quotePath}.`, error);
 				}
-				if (!cancelled) {
-					setAllQuotes([]);
-					setQuoteBuckets({ short: [], medium: [], long: [] });
-				}
+				setLoadedQuotes({
+					path: quotePath,
+					buckets: { short: [], medium: [], long: [] },
+					all: [],
+				});
 			}
 		}
 
@@ -217,7 +232,7 @@ function TypingPage() {
 			cancelled = true;
 			controller.abort();
 		};
-	}, [activeCorpus]);
+	}, [loadedQuotes?.path, preset, quotePath]);
 
 	// Persist selected corpus so refreshes keep the same dataset.
 	useEffect(() => {
@@ -250,11 +265,6 @@ function TypingPage() {
 		if (typeof window === "undefined") return;
 		window.localStorage.setItem(QUOTE_OPTION_STORAGE_KEY, quoteOption);
 	}, [quoteOption]);
-
-	// Keep session state consistent when test preset/options change.
-	useEffect(() => {
-		typing.reset();
-	}, [preset, quoteOption, timeOption, typing.reset, wordsOption]);
 
 	return (
 		<main className="relative flex min-h-screen select-none items-center justify-center bg-(--bg) font-mono">

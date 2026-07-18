@@ -2,6 +2,13 @@ Welcome to your new TanStack Start app!
 
 # Getting Started
 
+To run this application:
+
+```bash
+pnpm install
+pnpm dev
+```
+
 To update dependencies:
 
 ```bash
@@ -12,13 +19,6 @@ Migrate biome to the latest version:
 
 ```bash
 pnpm biome migrate --write
-```
-
-To run this application:
-
-```bash
-pnpm install
-pnpm dev
 ```
 
 # Building For Production
@@ -50,19 +50,6 @@ This project uses [Vitest](https://vitest.dev/) for testing. You can run the tes
 ```bash
 pnpm test
 ```
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
 
 ## Linting & Formatting
 
