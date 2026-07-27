@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RaceIndexRouteImport } from './routes/race/index'
+import { Route as RaceCodeRouteImport } from './routes/race/$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RaceIndexRoute = RaceIndexRouteImport.update({
+  id: '/race/',
+  path: '/race/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RaceCodeRoute = RaceCodeRouteImport.update({
+  id: '/race/$code',
+  path: '/race/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/race/$code': typeof RaceCodeRoute
+  '/race/': typeof RaceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/race/$code': typeof RaceCodeRoute
+  '/race': typeof RaceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/race/$code': typeof RaceCodeRoute
+  '/race/': typeof RaceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/race/$code' | '/race/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/race/$code' | '/race'
+  id: '__root__' | '/' | '/race/$code' | '/race/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RaceCodeRoute: typeof RaceCodeRoute
+  RaceIndexRoute: typeof RaceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/race/': {
+      id: '/race/'
+      path: '/race'
+      fullPath: '/race/'
+      preLoaderRoute: typeof RaceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/race/$code': {
+      id: '/race/$code'
+      path: '/race/$code'
+      fullPath: '/race/$code'
+      preLoaderRoute: typeof RaceCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RaceCodeRoute: RaceCodeRoute,
+  RaceIndexRoute: RaceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

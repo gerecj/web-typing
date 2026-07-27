@@ -1,8 +1,15 @@
 export function calculateWPM(startTime: number, endTime: number, correctKeys: boolean[]): number {
+	return calculateWPMFromCorrectCharacters(startTime, endTime, correctKeys.filter(Boolean).length);
+}
+
+export function calculateWPMFromCorrectCharacters(
+	startTime: number,
+	endTime: number,
+	correctCharacters: number,
+): number {
 	const minutes = (endTime - startTime) / 60000;
 	if (minutes <= 0) return 0;
-	const correctChars = correctKeys.filter(Boolean).length;
-	return Math.round(correctChars / 5 / minutes);
+	return Math.round(correctCharacters / 5 / minutes);
 }
 
 export function calculateAccuracy(totalInputs: number, correctInputs: number): number {

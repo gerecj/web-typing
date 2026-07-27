@@ -8,8 +8,8 @@ export interface CorpusOption {
 
 interface CorpusPickerProps {
 	active: string;
-	options: CorpusOption[];
-	onSelect: (id: string) => void;
+	options: readonly CorpusOption[];
+	onSelect?: (id: string) => void;
 	className?: string;
 }
 
@@ -53,8 +53,16 @@ export function CorpusPicker({ active, options, onSelect, className = "" }: Corp
 		};
 	}, [open]);
 
+	if (!onSelect) {
+		return (
+			<div className={`${controlStyles.group} ${className}`.trim()}>
+				<span className="rounded-md px-3 py-1 text-(--text-muted) text-sm">{activeLabel}</span>
+			</div>
+		);
+	}
+
 	function select(id: string) {
-		onSelect(id);
+		onSelect?.(id);
 		setOpen(false);
 	}
 

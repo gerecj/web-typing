@@ -1,9 +1,26 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "web-typing",
-  "compatibility_date": "2026-04-13",
-  "assets": {
-    "directory": "./dist/client",
-    "not_found_handling": "single-page-application"
-  }
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "web-typing",
+	"main": "./src/server/index.ts",
+	"compatibility_date": "2026-04-13",
+	"assets": {
+		"directory": "./dist/client",
+		"binding": "ASSETS",
+		"run_worker_first": ["/api/*"],
+		"not_found_handling": "single-page-application"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "RACE_ROOMS",
+				"class_name": "RaceRoom"
+			}
+		]
+	},
+	"exports": {
+		"RaceRoom": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		}
+	}
 }

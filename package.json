@@ -7,9 +7,13 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000",
+    "dev:worker": "wrangler dev --port 8787",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "cf:types": "wrangler types",
+    "cf:dry-run": "wrangler deploy --dry-run",
     "format": "biome format --write",
     "lint": "biome lint --write",
     "check": "biome check",

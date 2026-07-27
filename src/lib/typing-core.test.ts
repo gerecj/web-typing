@@ -20,6 +20,7 @@ describe("typing core", () => {
 			correctInputs: 1,
 			startTime: 100,
 			endTime: null,
+			lastInputTime: 100,
 			status: "typing",
 		});
 		expect(finished).toMatchObject({
@@ -28,6 +29,7 @@ describe("typing core", () => {
 			correctInputs: 1,
 			startTime: 100,
 			endTime: 400,
+			lastInputTime: 400,
 			status: "finished",
 		});
 		expect(typingReducer(finished, { type: "CHAR", key: "z", time: 500 })).toBe(finished);
@@ -46,6 +48,53 @@ describe("typing core", () => {
 		state = typingReducer(state, { type: "CTRL_BACKSPACE" });
 		expect(state.input).toBe("hello ");
 		expect(state).toMatchObject({ totalInputs: 10, correctInputs: 9 });
+	});
+
+	it("keeps strict input on the current character while counting failed attempts", () => {
+		let state = typingReducer(initialTypingState, {
+			type: "RESET",
+			text: "cat",
+			inputPolicy: "strict",
+		});
+
+		state = typingReducer(state, { type: "CHAR", key: "x", time: 100 });
+		expect(state).toMatchObject({
+			input: "",
+			totalInputs: 1,
+			correctInputs: 0,
+			startTime: 100,
+			status: "typing",
+		});
+
+		state = typingReducer(state, { type: "CHAR", key: "c", time: 200 });
+		expect(state).toMatchObject({
+			input: "c",
+			totalInputs: 2,
+			correctInputs: 1,
+			startTime: 100,
+			status: "typing",
+		});
+
+		expect(typingReducer(state, { type: "BACKSPACE" })).toBe(state);
+	});
+
+	it("uses a scheduled start and ignores early input", () => {
+		const ready = typingReducer(initialTypingState, {
+			type: "RESET",
+			text: "a",
+			inputPolicy: "strict",
+			startTime: 1_000,
+		});
+		const early = typingReducer(ready, { type: "CHAR", key: "a", time: 999 });
+		const finished = typingReducer(early, { type: "CHAR", key: "a", time: 1_250 });
+
+		expect(early).toBe(ready);
+		expect(finished).toMatchObject({
+			input: "a",
+			startTime: 1_000,
+			endTime: 1_250,
+			status: "finished",
+		});
 	});
 
 	it("calculates word correctness and session statistics", () => {

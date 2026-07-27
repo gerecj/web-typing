@@ -1,4 +1,5 @@
 export type TypingStatus = "idle" | "typing" | "finished";
+export type InputPolicy = "free" | "strict";
 
 export interface TypingState {
 	text: string;
@@ -7,7 +8,9 @@ export interface TypingState {
 	correctInputs: number;
 	startTime: number | null;
 	endTime: number | null;
+	lastInputTime: number | null;
 	status: TypingStatus;
+	inputPolicy: InputPolicy;
 }
 
 export type TypingAction =
@@ -15,7 +18,12 @@ export type TypingAction =
 	| { type: "BACKSPACE" }
 	| { type: "CTRL_BACKSPACE" }
 	| { type: "FINISH"; time: number }
-	| { type: "RESET"; text: string };
+	| {
+			type: "RESET";
+			text: string;
+			inputPolicy?: InputPolicy;
+			startTime?: number | null;
+	  };
 
 export const initialTypingState: TypingState = {
 	text: "",
@@ -24,20 +32,29 @@ export const initialTypingState: TypingState = {
 	correctInputs: 0,
 	startTime: null,
 	endTime: null,
+	lastInputTime: null,
 	status: "idle",
+	inputPolicy: "free",
 };
 
 export function typingReducer(state: TypingState, action: TypingAction): TypingState {
 	switch (action.type) {
 		case "RESET":
-			return { ...initialTypingState, text: action.text };
+			return {
+				...initialTypingState,
+				text: action.text,
+				inputPolicy: action.inputPolicy ?? "free",
+				startTime: action.startTime ?? null,
+			};
 
 		case "CHAR": {
 			if (state.status === "finished") return state;
 			if (state.input.length >= state.text.length) return state;
+			if (state.startTime !== null && action.time < state.startTime) return state;
 
-			const newInput = state.input + action.key;
 			const isCorrect = action.key === state.text[state.input.length];
+			const shouldAdvance = state.inputPolicy === "free" || isCorrect;
+			const newInput = shouldAdvance ? state.input + action.key : state.input;
 			const isFinished = newInput.length === state.text.length;
 
 			return {
@@ -47,12 +64,14 @@ export function typingReducer(state: TypingState, action: TypingAction): TypingS
 				correctInputs: state.correctInputs + (isCorrect ? 1 : 0),
 				startTime: state.startTime ?? action.time,
 				endTime: isFinished ? action.time : null,
+				lastInputTime: action.time,
 				status: isFinished ? "finished" : "typing",
 			};
 		}
 
 		case "BACKSPACE": {
 			if (state.status === "finished") return state;
+			if (state.inputPolicy === "strict") return state;
 			if (state.input.length === 0) return state;
 
 			return {
@@ -63,6 +82,7 @@ export function typingReducer(state: TypingState, action: TypingAction): TypingS
 
 		case "CTRL_BACKSPACE": {
 			if (state.status === "finished") return state;
+			if (state.inputPolicy === "strict") return state;
 			if (state.input.length === 0) return state;
 
 			return {

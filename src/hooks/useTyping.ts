@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
-import { initialTypingState, typingReducer } from "../lib/typing-engine";
+import {
+	type InputPolicy,
+	initialTypingState,
+	type TypingState,
+	typingReducer,
+} from "../lib/typing-engine";
 import {
 	calculateAccuracy,
 	calculateWPM,
@@ -9,11 +14,19 @@ import {
 } from "../lib/typing-metrics";
 import { buildTypingText } from "../lib/typing-text-provider";
 
-interface UseTypingOptions {
+export type StartPolicy = "first-key" | "scheduled";
+
+export interface UseTypingOptions {
 	mode?: "words" | "time";
 	durationSec?: number;
 	textProvider?: () => string;
+	text?: string;
 	enabled?: boolean;
+	inputPolicy?: InputPolicy;
+	startPolicy?: StartPolicy;
+	scheduledStartTime?: number;
+	allowRestart?: boolean;
+	resetKey?: string | number;
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -29,22 +42,59 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 	const mode = options?.mode ?? "words";
 	const durationMs = (options?.durationSec ?? 30) * 1000;
 	const enabled = options?.enabled ?? true;
+	const inputPolicy = options?.inputPolicy ?? "free";
+	const startPolicy = options?.startPolicy ?? "first-key";
+	const scheduledStartTime =
+		startPolicy === "scheduled" ? (options?.scheduledStartTime ?? null) : null;
+	const allowRestart = options?.allowRestart ?? true;
+	const resetKey = options?.resetKey;
+	const authoritativeText = options?.text;
 	const defaultTextProvider = useCallback(
 		() => buildTypingText(words, numWords),
 		[words, numWords],
 	);
-	const buildText = options?.textProvider ?? defaultTextProvider;
+	const configuredTextProvider = options?.textProvider;
+	const buildText = useCallback(
+		() => authoritativeText ?? configuredTextProvider?.() ?? defaultTextProvider(),
+		[authoritativeText, configuredTextProvider, defaultTextProvider],
+	);
 
-	const [state, dispatch] = useReducer(typingReducer, { words, numWords }, () => ({
-		...initialTypingState,
-		text: buildText(),
-	}));
+	const [state, dispatch] = useReducer(
+		typingReducer,
+		{ buildText, inputPolicy, scheduledStartTime },
+		({
+			buildText: initialBuildText,
+			inputPolicy: initialInputPolicy,
+			scheduledStartTime: initialStart,
+		}) =>
+			({
+				...initialTypingState,
+				text: initialBuildText(),
+				inputPolicy: initialInputPolicy,
+				startTime: initialStart,
+			}) satisfies TypingState,
+	);
+	const [appliedResetKey, setAppliedResetKey] = useState(resetKey);
 
 	const reset = useCallback(() => {
-		dispatch({ type: "RESET", text: buildText() });
-	}, [buildText]);
+		dispatch({
+			type: "RESET",
+			text: buildText(),
+			inputPolicy,
+			startTime: scheduledStartTime,
+		});
+	}, [buildText, inputPolicy, scheduledStartTime]);
 
-	const previousConfigRef = useRef({ buildText, durationMs, enabled, mode });
+	const previousConfigRef = useRef({
+		buildText,
+		durationMs,
+		enabled,
+		inputPolicy,
+		mode,
+		resetKey,
+		scheduledStartTime,
+		startPolicy,
+	});
 
 	// Reset once when a usable typing configuration actually changes, never just because of mount.
 	useLayoutEffect(() => {
@@ -53,11 +103,37 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 			previous.buildText !== buildText ||
 			previous.durationMs !== durationMs ||
 			previous.enabled !== enabled ||
-			previous.mode !== mode;
+			previous.inputPolicy !== inputPolicy ||
+			previous.mode !== mode ||
+			previous.resetKey !== resetKey ||
+			previous.scheduledStartTime !== scheduledStartTime ||
+			previous.startPolicy !== startPolicy;
 
-		previousConfigRef.current = { buildText, durationMs, enabled, mode };
-		if (enabled && changed) reset();
-	}, [buildText, durationMs, enabled, mode, reset]);
+		previousConfigRef.current = {
+			buildText,
+			durationMs,
+			enabled,
+			inputPolicy,
+			mode,
+			resetKey,
+			scheduledStartTime,
+			startPolicy,
+		};
+		if (enabled && changed) {
+			reset();
+			setAppliedResetKey(resetKey);
+		}
+	}, [
+		buildText,
+		durationMs,
+		enabled,
+		inputPolicy,
+		mode,
+		reset,
+		resetKey,
+		scheduledStartTime,
+		startPolicy,
+	]);
 
 	// Global keyboard handling for typing input and the restart shortcut.
 	useEffect(() => {
@@ -67,8 +143,10 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 			if (isInteractiveTarget(e.target)) return;
 
 			if (e.key === "Tab") {
-				e.preventDefault();
-				reset();
+				if (allowRestart) {
+					e.preventDefault();
+					reset();
+				}
 				return;
 			}
 
@@ -85,13 +163,15 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 				dispatch({ type: "BACKSPACE" });
 			} else if (e.key.length === 1) {
 				e.preventDefault();
-				dispatch({ type: "CHAR", key: e.key, time: performance.now() });
+				const time = performance.now();
+				if (scheduledStartTime !== null && time < scheduledStartTime) return;
+				dispatch({ type: "CHAR", key: e.key, time });
 			}
 		}
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [enabled, reset]);
+	}, [allowRestart, enabled, reset, scheduledStartTime]);
 
 	const [nowMs, setNowMs] = useState(0);
 
@@ -119,11 +199,17 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 	const currentIndex = state.input.length;
 
 	const correctKeys = state.input.split("").map((c, i) => c === state.text[i]);
+	const correctCharacterCount = correctKeys.filter(Boolean).length;
 	const wordCorrectness = computeWordCorrectness(state.text, correctKeys);
 
 	const wpm =
 		state.startTime !== null && state.endTime !== null
 			? calculateWPM(state.startTime, state.endTime, correctKeys)
+			: 0;
+	const liveWpmEndTime = state.endTime ?? state.lastInputTime;
+	const liveWpm =
+		state.startTime !== null && liveWpmEndTime !== null
+			? calculateWPM(state.startTime, liveWpmEndTime, correctKeys)
 			: 0;
 
 	const accuracy = calculateAccuracy(state.totalInputs, state.correctInputs);
@@ -149,7 +235,11 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		wordCorrectness,
 		status: state.status,
 		wpm,
+		liveWpm,
 		accuracy,
+		totalInputs: state.totalInputs,
+		correctInputs: state.correctInputs,
+		correctCharacterCount,
 		typedWords,
 		totalWords,
 		correctWords,
@@ -158,6 +248,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		enabled,
 		timeLeftMs,
 		durationMs,
+		appliedResetKey,
 		reset,
 	};
 }
