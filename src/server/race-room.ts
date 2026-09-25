@@ -60,6 +60,7 @@ export class RaceRoom extends DurableObject<Env> {
 	private room: RoomState | null = null;
 	private scheduledAlarm: number | null = null;
 	private lastProgressPersistAt = 0;
+	private roundStarting = false;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -254,7 +255,9 @@ export class RaceRoom extends DurableObject<Env> {
 	}
 
 	private async beginRound(now: number) {
-		if (!this.room) return;
+		// Other messages are handled while the passage loads, so ignore repeated start requests.
+		if (!this.room || this.roundStarting) return;
+		this.roundStarting = true;
 		let text: string;
 		try {
 			text = await generateRacePassage(this.env, this.room.settings);
@@ -263,6 +266,8 @@ export class RaceRoom extends DurableObject<Env> {
 				this.sendError(socket, "passage_unavailable", "The race text could not be loaded.");
 			}
 			return;
+		} finally {
+			this.roundStarting = false;
 		}
 
 		const round: RoomRound = {

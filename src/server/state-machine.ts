@@ -211,6 +211,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			if (state.phase !== "waiting") return reject(current, "invalid_phase");
 			const player = state.players[event.playerId];
 			if (!player) return reject(current, "not_found");
+			if (player.ready === event.ready) return { state: current, effects: [] };
 			player.ready = event.ready;
 			effects.push({ type: "snapshot_changed" });
 			if (allConnectedReady(state)) effects.push({ type: "round_requested" });
