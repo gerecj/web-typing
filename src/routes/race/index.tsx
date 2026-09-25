@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { ModeSwitcher } from "../../components/ModeSwitcher";
 import { ThemePicker } from "../../components/ThemePicker";
 import { normalizeLobbyCode } from "../../lib/race/lobby-code";
+import { MAX_PLAYER_NAME_LENGTH } from "../../lib/race/protocol";
 import { RACE_PLAYER_NAME_STORAGE_KEY } from "../../lib/race/session";
 
 export const Route = createFileRoute("/race/")({
@@ -18,12 +19,12 @@ function RaceEntryPage() {
 	const [code, setCode] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [creating, setCreating] = useState(false);
-	const hasValidName = name.trim().length > 0 && name.trim().length <= 24;
+	const hasValidName = name.trim().length > 0;
 
 	function rememberName(): string | null {
 		const normalized = name.trim();
-		if (!normalized || normalized.length > 24) {
-			setError("Choose a guest name between 1 and 24 characters.");
+		if (!normalized) {
+			setError("Choose a guest name.");
 			return null;
 		}
 		window.sessionStorage.setItem(RACE_PLAYER_NAME_STORAGE_KEY, normalized);
@@ -80,7 +81,7 @@ function RaceEntryPage() {
 					<span className="text-(--text-muted) text-sm">guest name</span>
 					<input
 						value={name}
-						maxLength={24}
+						maxLength={MAX_PLAYER_NAME_LENGTH}
 						onChange={(event) => setName(event.currentTarget.value)}
 						placeholder="Your name"
 						className="w-full select-text rounded-md border border-(--text-muted)/30 bg-transparent px-3 py-2 text-(--text) outline-none focus:border-(--accent)"

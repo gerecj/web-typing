@@ -11,6 +11,7 @@ import { TypingSettingsBar } from "../../components/TypingSettingsBar";
 import { TypingStage } from "../../components/TypingStage";
 import { Words } from "../../components/Words";
 import { useRace } from "../../hooks/race/useRace";
+import { MAX_PLAYER_NAME_LENGTH } from "../../lib/race/protocol";
 import { RACE_PLAYER_NAME_STORAGE_KEY } from "../../lib/race/session";
 import { CORPORA, QUOTE_OPTIONS, WORDS_OPTIONS } from "../../lib/typing-settings";
 
@@ -31,7 +32,7 @@ function RaceRoomPage() {
 		event.preventDefault();
 		const data = new FormData(event.currentTarget);
 		const nextName = String(data.get("name") ?? "").trim();
-		if (!nextName || nextName.length > 24) return;
+		if (!nextName) return;
 		window.sessionStorage.setItem(RACE_PLAYER_NAME_STORAGE_KEY, nextName);
 		setName(nextName);
 	}
@@ -75,7 +76,7 @@ function RaceRoomPage() {
 					<input
 						name="name"
 						required
-						maxLength={24}
+						maxLength={MAX_PLAYER_NAME_LENGTH}
 						placeholder="Guest name"
 						className="w-full select-text rounded-md border border-(--text-muted)/30 bg-transparent px-3 py-2 text-(--text) outline-none focus:border-(--accent)"
 					/>
