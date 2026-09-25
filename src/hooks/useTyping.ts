@@ -150,7 +150,9 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 				return;
 			}
 
-			if (e.ctrlKey || e.metaKey) {
+			// AltGr is reported as Ctrl+Alt on Windows, so it must still count as typing.
+			const isAltGr = e.ctrlKey && e.altKey;
+			if ((e.ctrlKey || e.metaKey) && !isAltGr) {
 				if (e.key === "Backspace") {
 					e.preventDefault();
 					dispatch({ type: "CTRL_BACKSPACE" });
