@@ -12,8 +12,6 @@ import {
 	type ServerMessage,
 } from "../../lib/race/protocol";
 
-export type RaceConnectionStatus = "idle" | "connecting" | "connected" | "disconnected";
-
 export interface ActiveRace {
 	roundId: string;
 	text: string;
@@ -41,7 +39,6 @@ function updatePlayer(
 }
 
 export function useRaceSocket(code: string, name: string | null) {
-	const [status, setStatus] = useState<RaceConnectionStatus>("idle");
 	const [room, setRoom] = useState<RoomSnapshot | null>(null);
 	const [playerId, setPlayerId] = useState<string | null>(null);
 	const [activeRace, setActiveRace] = useState<ActiveRace | null>(null);
@@ -52,143 +49,130 @@ export function useRaceSocket(code: string, name: string | null) {
 	const clockOffsetRef = useRef(0);
 
 	useEffect(() => {
-		if (!name) {
-			setStatus("idle");
-			return;
-		}
-		const playerName = name;
+		if (!name) return;
 
 		let disposed = false;
-		function connect() {
+		const socket = new WebSocket(websocketUrl(code));
+		socketRef.current = socket;
+
+		socket.addEventListener("open", () => {
 			if (disposed) return;
-			setStatus("connecting");
-			const socket = new WebSocket(websocketUrl(code));
-			socketRef.current = socket;
+			const join: ClientMessage = {
+				v: PROTOCOL_VERSION,
+				type: "join",
+				name,
+			};
+			socket.send(JSON.stringify(join));
+		});
 
-			socket.addEventListener("open", () => {
-				if (disposed) return;
-				const join: ClientMessage = {
-					v: PROTOCOL_VERSION,
-					type: "join",
-					name: playerName,
-				};
-				socket.send(JSON.stringify(join));
-			});
+		socket.addEventListener("message", (event) => {
+			if (disposed || typeof event.data !== "string") return;
+			let message: ServerMessage;
+			try {
+				message = JSON.parse(event.data) as ServerMessage;
+			} catch {
+				setError("The lobby sent an unreadable response.");
+				return;
+			}
+			if (message.v !== PROTOCOL_VERSION) {
+				setError("The lobby protocol changed. Return to the race menu and try again.");
+				return;
+			}
 
-			socket.addEventListener("message", (event) => {
-				if (disposed || typeof event.data !== "string") return;
-				let message: ServerMessage;
-				try {
-					message = JSON.parse(event.data) as ServerMessage;
-				} catch {
-					setError("The lobby sent an unreadable response.");
-					return;
-				}
-				if (message.v !== PROTOCOL_VERSION) {
-					setError("The lobby protocol changed. Return to the race menu and try again.");
-					return;
-				}
-
-				switch (message.type) {
-					case "welcome":
-						setPlayerId(message.playerId);
-						setRoom(message.room);
-						setStatus("connected");
-						setError(null);
-						for (let index = 0; index < 3; index++) {
-							window.setTimeout(() => {
-								if (socket.readyState !== WebSocket.OPEN) return;
-								socket.send(
-									JSON.stringify({
-										v: PROTOCOL_VERSION,
-										type: "ping",
-										clientSentAt: Date.now(),
-									} satisfies ClientMessage),
-								);
-							}, index * 100);
-						}
-						break;
-					case "snapshot":
-						setRoom(message.room);
-						break;
-					case "race_start": {
-						const localStartsAt = serverEpochToPerformanceTime(
-							message.startsAt,
-							clockOffsetRef.current,
-							Date.now(),
-							performance.now(),
-						);
-						setActiveRace({ ...message, localStartsAt });
-						setError(null);
-						break;
-					}
-					case "player_progress":
-						setRoom((current) =>
-							updatePlayer(current, message.playerId, (player) => ({
-								...player,
-								charIndex: message.charIndex,
-								correctCharacters: message.correctCharacters,
-								wpm: message.wpm,
-							})),
-						);
-						break;
-					case "player_finished":
-						setRoom((current) =>
-							updatePlayer(current, message.playerId, (player) => ({
-								...player,
-								charIndex: message.charIndex,
-								correctCharacters: message.correctCharacters,
-								place: message.place,
-								wpm: message.wpm,
-								accuracy: message.accuracy,
-							})),
-						);
-						break;
-					case "pong": {
-						const sample = {
-							clientSentAt: message.clientSentAt,
-							clientReceivedAt: Date.now(),
-							serverNow: message.serverNow,
-						};
-						clockSamplesRef.current = [...clockSamplesRef.current.slice(-4), sample];
-						const estimate = selectClockEstimate(clockSamplesRef.current);
-						if (estimate) {
-							clockOffsetRef.current = estimate.offsetMs;
-							setClockOffsetMs(estimate.offsetMs);
-							setActiveRace((current) =>
-								current
-									? {
-											...current,
-											localStartsAt: serverEpochToPerformanceTime(
-												current.startsAt,
-												estimate.offsetMs,
-												Date.now(),
-												performance.now(),
-											),
-										}
-									: current,
+			switch (message.type) {
+				case "welcome":
+					setPlayerId(message.playerId);
+					setRoom(message.room);
+					setError(null);
+					for (let index = 0; index < 3; index++) {
+						window.setTimeout(() => {
+							if (socket.readyState !== WebSocket.OPEN) return;
+							socket.send(
+								JSON.stringify({
+									v: PROTOCOL_VERSION,
+									type: "ping",
+									clientSentAt: Date.now(),
+								} satisfies ClientMessage),
 							);
-						}
-						break;
+						}, index * 100);
 					}
-					case "error":
-						setError(message.message);
-						break;
+					break;
+				case "snapshot":
+					setRoom(message.room);
+					break;
+				case "race_start": {
+					const localStartsAt = serverEpochToPerformanceTime(
+						message.startsAt,
+						clockOffsetRef.current,
+						Date.now(),
+						performance.now(),
+					);
+					setActiveRace({ ...message, localStartsAt });
+					setError(null);
+					break;
 				}
-			});
+				case "player_progress":
+					setRoom((current) =>
+						updatePlayer(current, message.playerId, (player) => ({
+							...player,
+							charIndex: message.charIndex,
+							correctCharacters: message.correctCharacters,
+							wpm: message.wpm,
+						})),
+					);
+					break;
+				case "player_finished":
+					setRoom((current) =>
+						updatePlayer(current, message.playerId, (player) => ({
+							...player,
+							charIndex: message.charIndex,
+							correctCharacters: message.correctCharacters,
+							place: message.place,
+							wpm: message.wpm,
+							accuracy: message.accuracy,
+						})),
+					);
+					break;
+				case "pong": {
+					const sample = {
+						clientSentAt: message.clientSentAt,
+						clientReceivedAt: Date.now(),
+						serverNow: message.serverNow,
+					};
+					clockSamplesRef.current = [...clockSamplesRef.current.slice(-4), sample];
+					const estimate = selectClockEstimate(clockSamplesRef.current);
+					if (estimate) {
+						clockOffsetRef.current = estimate.offsetMs;
+						setClockOffsetMs(estimate.offsetMs);
+						setActiveRace((current) =>
+							current
+								? {
+										...current,
+										localStartsAt: serverEpochToPerformanceTime(
+											current.startsAt,
+											estimate.offsetMs,
+											Date.now(),
+											performance.now(),
+										),
+									}
+								: current,
+						);
+					}
+					break;
+				}
+				case "error":
+					setError(message.message);
+					break;
+			}
+		});
 
-			socket.addEventListener("close", () => {
-				if (disposed) return;
-				socketRef.current = null;
-				setStatus("disconnected");
-			});
+		socket.addEventListener("close", () => {
+			if (disposed) return;
+			socketRef.current = null;
+			// Keep a more specific error the server may have sent before closing.
+			setError((current) => current ?? "The lobby connection was closed.");
+		});
 
-			socket.addEventListener("error", () => {
-				if (!disposed) setError("The lobby connection was interrupted.");
-			});
-		}
-
-		connect();
 		return () => {
 			disposed = true;
 			socketRef.current?.close(1000, "Leaving lobby");
@@ -226,6 +210,5 @@ export function useRaceSocket(code: string, name: string | null) {
 		sendReady,
 		sendRepeat,
 		sendSettings,
-		status,
 	};
 }
