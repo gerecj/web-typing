@@ -177,7 +177,7 @@ export class RaceRoom extends DurableObject<Env> {
 		if (transition.error) {
 			const message =
 				transition.error === "invalid_phase"
-					? "This lobby is already racing. Try again when it returns to the lobby."
+					? "This lobby is already racing. Try again when the race ends."
 					: errorMessage(transition.error);
 			this.sendError(socket, transition.error, message);
 			socket.close(4003, "Lobby join rejected");
@@ -194,17 +194,6 @@ export class RaceRoom extends DurableObject<Env> {
 			serverNow: now,
 			room: toRoomSnapshot(this.room),
 		});
-		if (this.room.round) {
-			this.send(socket, {
-				v: PROTOCOL_VERSION,
-				type: "race_start",
-				roundId: this.room.round.id,
-				text: this.room.round.text,
-				startsAt: this.room.round.startsAt,
-				deadlineAt: this.room.round.deadlineAt,
-				settings: this.room.settings,
-			});
-		}
 		this.broadcastSnapshot();
 	}
 

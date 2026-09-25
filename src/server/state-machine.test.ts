@@ -310,6 +310,45 @@ describe("race room state machine", () => {
 		expect(second.effects.some((effect) => effect.type === "round_requested")).toBe(true);
 	});
 
+	it("lets a player join during results but not mid-race", () => {
+		let state = racingRoom();
+		expect(transitionRoom(state, { type: "join", player: player("late"), now: 1_500 }).error).toBe(
+			"invalid_phase",
+		);
+
+		for (const playerId of ["one", "two"]) {
+			state = transitionRoom(state, {
+				type: "finish",
+				playerId,
+				roundId: "round-1",
+				charIndex: 3,
+				totalInputs: 3,
+				correctInputs: 3,
+				correctCharacters: 3,
+				now: 2_000,
+			}).state;
+		}
+		const joined = transitionRoom(state, { type: "join", player: player("late"), now: 3_000 });
+		expect(joined.error).toBeUndefined();
+
+		state = joined.state;
+		for (const playerId of ["one", "two"]) {
+			state = transitionRoom(state, {
+				type: "set_repeat",
+				playerId,
+				ready: true,
+				now: 4_000,
+			}).state;
+		}
+		const last = transitionRoom(state, {
+			type: "set_repeat",
+			playerId: "late",
+			ready: true,
+			now: 4_001,
+		});
+		expect(last.effects.some((effect) => effect.type === "round_requested")).toBe(true);
+	});
+
 	it("starts a rematch when an unready results player leaves two ready players", () => {
 		let state = waitingRoom();
 		state = transitionRoom(state, { type: "join", player: player("three", true), now: 3 }).state;

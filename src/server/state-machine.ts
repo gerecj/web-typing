@@ -170,7 +170,9 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 
 	switch (event.type) {
 		case "join": {
-			if (state.phase !== "waiting") return reject(current, "invalid_phase");
+			if (state.phase !== "waiting" && state.phase !== "results") {
+				return reject(current, "invalid_phase");
+			}
 			if (state.players[event.player.id]) return reject(current, "already_joined");
 			if (Object.keys(state.players).length >= MAX_RACE_PLAYERS) {
 				return reject(current, "lobby_full");
