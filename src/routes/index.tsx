@@ -91,7 +91,7 @@ function TypingPage() {
 				}}
 				onTogglePunctuation={() => setPunctuationEnabled((value) => !value)}
 			/>
-			<div className="absolute top-16 left-1/2 z-10 flex -translate-x-1/2 items-start gap-4 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0">
+			<div className="absolute top-4 right-4 z-10 flex items-start gap-2 md:top-16 md:right-auto md:left-1/2 md:-translate-x-1/2 md:gap-4 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0">
 				<CorpusPicker
 					active={activeCorpus}
 					options={CORPORA}

@@ -36,7 +36,7 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 			</header>
 
 			<div>
-				<div className="flex items-center justify-center gap-3 whitespace-nowrap">
+				<div className="flex flex-wrap items-center justify-center gap-3 whitespace-nowrap">
 					<div className={controlStyles.group}>
 						{(["words", "quote"] as const).map((preset) => (
 							<button

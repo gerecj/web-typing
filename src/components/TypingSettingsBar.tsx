@@ -61,9 +61,12 @@ export function TypingSettingsBar({
 	onTogglePunctuation,
 }: TypingSettingsBarProps) {
 	return (
-		<div className="absolute top-4 left-1/2 z-10 -translate-x-1/2">
+		// On phones the groups wrap on their own row below the top corners.
+		<div className="absolute inset-x-0 top-16 z-10 flex flex-wrap justify-center gap-2 px-4 md:inset-x-auto md:top-4 md:left-1/2 md:block md:-translate-x-1/2 md:px-0">
 			{showPunctuation && (
-				<div className={`absolute top-0 right-full mr-4 whitespace-nowrap ${controlStyles.group}`}>
+				<div
+					className={`whitespace-nowrap md:absolute md:top-0 md:right-full md:mr-4 ${controlStyles.group}`}
+				>
 					<SettingItem active={punctuationEnabled} onSelect={onTogglePunctuation}>
 						punctuation
 					</SettingItem>
@@ -83,7 +86,7 @@ export function TypingSettingsBar({
 			</div>
 
 			<div
-				className={`absolute top-0 left-full ml-4 flex-nowrap whitespace-nowrap ${controlStyles.group}`}
+				className={`flex-nowrap whitespace-nowrap md:absolute md:top-0 md:left-full md:ml-4 ${controlStyles.group}`}
 			>
 				{lengthOptions.map((option) => (
 					<SettingItem
