@@ -7,7 +7,6 @@ import {
 	type ServerMessage,
 } from "../lib/race/protocol";
 import { getNextRoomDeadline } from "./deadlines";
-import type { WorkerEnv } from "./env";
 import { generateRacePassage } from "./passage-service";
 import {
 	createRoomState,
@@ -57,12 +56,12 @@ function errorMessage(code: string): string {
 	}
 }
 
-export class RaceRoom extends DurableObject<WorkerEnv> {
+export class RaceRoom extends DurableObject<Env> {
 	private room: RoomState | null = null;
 	private scheduledAlarm: number | null = null;
 	private lastProgressPersistAt = 0;
 
-	constructor(ctx: DurableObjectState, env: WorkerEnv) {
+	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		ctx.blockConcurrencyWhile(async () => {
 			this.room = (await ctx.storage.get<RoomState>(ROOM_STORAGE_KEY)) ?? null;
@@ -70,21 +69,16 @@ export class RaceRoom extends DurableObject<WorkerEnv> {
 		});
 	}
 
+	/** Returns false when a lobby with this code already exists. */
+	async initialize(code: string): Promise<boolean> {
+		if (this.room) return false;
+		const now = Date.now();
+		this.room = createRoomState(code, now, now + ROOM_LIFETIME_MS);
+		await this.persistAndSchedule(now);
+		return true;
+	}
+
 	async fetch(request: Request): Promise<Response> {
-		const url = new URL(request.url);
-
-		if (request.method === "POST" && url.pathname === "/initialize") {
-			if (this.room) return jsonError(409, "Lobby already exists");
-			const payload = (await request.json().catch(() => null)) as { code?: unknown } | null;
-			if (!payload || typeof payload.code !== "string") {
-				return jsonError(400, "A lobby code is required");
-			}
-			const now = Date.now();
-			this.room = createRoomState(payload.code, now, now + ROOM_LIFETIME_MS);
-			await this.persistAndSchedule(now);
-			return Response.json({ ok: true }, { status: 201 });
-		}
-
 		if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
 			return jsonError(426, "A WebSocket upgrade is required");
 		}

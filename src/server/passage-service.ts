@@ -1,7 +1,6 @@
 import type { RaceSettings } from "../lib/race/protocol";
 import { CORPORA, QUOTE_GROUP_INDEX } from "../lib/typing-settings";
 import { buildTypingText } from "../lib/typing-text-provider";
-import type { WorkerEnv } from "./env";
 
 const FALLBACK_WORDS = ["the", "be", "to", "of", "and", "a", "in", "that", "have", "it"];
 
@@ -15,13 +14,13 @@ function randomFrom<T>(items: T[]): T | null {
 	return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 
-async function loadAssetJson<T>(env: WorkerEnv, path: string): Promise<T> {
+async function loadAssetJson<T>(env: Env, path: string): Promise<T> {
 	const response = await env.ASSETS.fetch(new Request(`https://assets.local${path}`));
 	if (!response.ok) throw new Error(`Unable to load race asset '${path}' (${response.status})`);
 	return (await response.json()) as T;
 }
 
-export async function generateRacePassage(env: WorkerEnv, settings: RaceSettings): Promise<string> {
+export async function generateRacePassage(env: Env, settings: RaceSettings): Promise<string> {
 	if (settings.preset === "quote") {
 		const quotePath = settings.corpusId.startsWith("slovak")
 			? "/quotes/slovak.json"

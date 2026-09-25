@@ -1,29 +1,22 @@
 import { createLobbyCode, normalizeLobbyCode } from "../lib/race/lobby-code";
-import type { WorkerEnv } from "./env";
 import { RaceRoom } from "./race-room";
 
 const MAX_CREATE_ATTEMPTS = 5;
 
-function roomStub(env: WorkerEnv, code: string): DurableObjectStub {
+function roomStub(env: Env, code: string): DurableObjectStub<RaceRoom> {
 	return env.RACE_ROOMS.get(env.RACE_ROOMS.idFromName(code));
 }
 
-async function createLobby(env: WorkerEnv): Promise<Response> {
+async function createLobby(env: Env): Promise<Response> {
 	for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {
 		const code = createLobbyCode();
-		const response = await roomStub(env, code).fetch("https://race-room/initialize", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ code }),
-		});
-		if (response.status === 409) continue;
-		if (!response.ok) return new Response("Unable to create lobby", { status: 502 });
-		return Response.json({ code }, { status: 201 });
+		const created = await roomStub(env, code).initialize(code);
+		if (created) return Response.json({ code }, { status: 201 });
 	}
 	return new Response("Unable to allocate a unique lobby code", { status: 503 });
 }
 
-async function routeApi(request: Request, env: WorkerEnv): Promise<Response | null> {
+async function routeApi(request: Request, env: Env): Promise<Response | null> {
 	const url = new URL(request.url);
 
 	if (request.method === "POST" && url.pathname === "/api/lobbies") {
@@ -50,4 +43,4 @@ export default {
 		const apiResponse = await routeApi(request, env);
 		return apiResponse ?? env.ASSETS.fetch(request);
 	},
-} satisfies ExportedHandler<WorkerEnv>;
+} satisfies ExportedHandler<Env>;

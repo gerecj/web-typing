@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 interface TypingStageProps {
-	children: React.ReactNode;
-	topContent?: React.ReactNode;
-	bottomContent?: React.ReactNode;
+	children: ReactNode;
+	topContent?: ReactNode;
+	bottomContent?: ReactNode;
 }
 
 interface StageFit {
@@ -79,7 +79,7 @@ export function TypingStage({ children, topContent, bottomContent }: TypingStage
 	const stageStyle = {
 		transform: `translateY(${fit.verticalOffset}px)`,
 		"--typing-top-compression": `${fit.topCompression}px`,
-	} as React.CSSProperties;
+	} as CSSProperties;
 
 	return (
 		<div className="w-full max-w-4xl px-4">

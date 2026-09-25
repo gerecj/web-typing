@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { controlStyles, segmentedItemClass } from "../lib/controlStyles";
 import type { TypingPreset } from "../lib/typing-settings";
 
@@ -17,7 +18,7 @@ interface TypingSettingsBarProps {
 
 interface SettingItemProps {
 	active: boolean;
-	children: React.ReactNode;
+	children: ReactNode;
 	onSelect?: () => void;
 }
 
