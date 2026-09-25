@@ -2,6 +2,7 @@
   "name": "web-typing",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.13.1",
   "imports": {
     "#/*": "./src/*"
   },
