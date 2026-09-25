@@ -44,7 +44,7 @@ export function TypingStage({ children, topContent, bottomContent }: TypingStage
 			setFit((current) => {
 				const uncompressedTop = topRect
 					? topRect.top - current.verticalOffset - current.topCompression
-					: Number.NEGATIVE_INFINITY;
+					: Number.POSITIVE_INFINITY;
 				const unshiftedBottom = (bottomRect?.bottom ?? stageRect.bottom) - current.verticalOffset;
 				const minimumOffset = TOP_SAFE_EDGE_PX - uncompressedTop;
 				const maximumOffset = window.innerHeight - BOTTOM_SAFE_EDGE_PX - unshiftedBottom;
