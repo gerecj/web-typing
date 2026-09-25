@@ -7,7 +7,7 @@ interface ModeSwitcherProps {
 
 export function ModeSwitcher({ active }: ModeSwitcherProps) {
 	return (
-		<nav aria-label="Play mode" className={controlStyles.group}>
+		<nav aria-label="Play mode" data-hide-while-typing className={controlStyles.group}>
 			<Link to="/" className={segmentedItemClass(active === "solo")}>
 				solo
 			</Link>
