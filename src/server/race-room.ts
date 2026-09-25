@@ -17,6 +17,7 @@ import {
 } from "./room-state";
 import {
 	type RoomEffect,
+	type RoomErrorCode,
 	type RoomEvent,
 	type TransitionResult,
 	transitionRoom,
@@ -37,8 +38,12 @@ function jsonError(status: number, message: string): Response {
 	return Response.json({ error: message }, { status });
 }
 
-function errorMessage(code: string): string {
+function errorMessage(code: RoomErrorCode): string {
 	switch (code) {
+		case "already_joined":
+			return "You already joined this lobby.";
+		case "not_found":
+			return "You are no longer part of this race.";
 		case "lobby_full":
 			return "This lobby already has six players.";
 		case "not_host":
@@ -51,8 +56,6 @@ function errorMessage(code: string): string {
 			return "That message belongs to a different race.";
 		case "invalid_progress":
 			return "The reported race progress is invalid.";
-		default:
-			return "The room could not process that action.";
 	}
 }
 

@@ -236,8 +236,6 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			const isRepeatStart = state.phase === "results" && allConnectedRepeatReady(state);
 			if (!isReadyStart && !isRepeatStart) return reject(current, "not_ready");
 
-			const racers = connectedPlayers(state);
-			if (racers.length < MIN_RACE_PLAYERS) return reject(current, "not_ready");
 			if (
 				event.round.text.length === 0 ||
 				event.round.startsAt <= event.now ||
@@ -302,11 +300,6 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 
 			player.place =
 				Math.max(0, ...Object.values(state.players).map((candidate) => candidate.place ?? 0)) + 1;
-			player.wpm = calculateWPMFromCorrectCharacters(
-				state.round.startsAt,
-				event.now,
-				player.correctCharacters,
-			);
 			player.accuracy = calculateAccuracy(player.totalInputs, player.correctInputs);
 			player.finishedAt = event.now;
 			effects.push({
