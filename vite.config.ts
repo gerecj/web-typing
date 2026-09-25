@@ -17,7 +17,8 @@ const config = defineConfig({
 		},
 	},
 	plugins: [
-		devtools(),
+		// Console piping can echo server errors back and forth and freeze the tab.
+		devtools({ consolePiping: { enabled: false } }),
 		tailwindcss(),
 		tanstackStart({
 			spa: {
