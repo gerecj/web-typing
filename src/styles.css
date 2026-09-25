@@ -51,3 +51,15 @@ body {
 .animate-cursor-blink {
   animation: cursor-blink 1s steps(1, end) infinite;
 }
+
+/* On phones, hide the settings while the typing input has focus, since the keyboard leaves little room. */
+@media (width < 48rem) {
+  [data-hide-while-typing] {
+    transition: opacity 150ms;
+  }
+
+  body:has([data-typing-input]:focus) [data-hide-while-typing] {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

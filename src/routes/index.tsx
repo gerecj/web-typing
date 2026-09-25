@@ -25,6 +25,11 @@ import {
 } from "../lib/typing-settings";
 import { buildTypingText } from "../lib/typing-text-provider";
 
+// Phones hide the punctuation toggle and always get plain words.
+function isPhoneWidth(): boolean {
+	return typeof window !== "undefined" && window.matchMedia("(width < 48rem)").matches;
+}
+
 export const Route = createFileRoute("/")({ component: TypingPage });
 
 function TypingPage() {
@@ -58,7 +63,10 @@ function TypingPage() {
 	const selectedLength =
 		preset === "quote" ? quoteOption : preset === "words" ? wordsOption : timeOption;
 	const wordsTextProvider = useCallback(
-		() => buildTypingText(words, targetWordCount, { enrichText: punctuationEnabled }),
+		() =>
+			buildTypingText(words, targetWordCount, {
+				enrichText: punctuationEnabled && !isPhoneWidth(),
+			}),
 		[punctuationEnabled, targetWordCount, words],
 	);
 	const quoteTextProvider = useCallback(
@@ -91,7 +99,10 @@ function TypingPage() {
 				}}
 				onTogglePunctuation={() => setPunctuationEnabled((value) => !value)}
 			/>
-			<div className="absolute top-4 right-4 z-10 flex items-start gap-2 md:top-16 md:right-auto md:left-1/2 md:-translate-x-1/2 md:gap-4 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0">
+			<div
+				data-hide-while-typing
+				className="absolute top-4 right-4 z-10 flex items-start gap-2 md:top-16 md:right-auto md:left-1/2 md:-translate-x-1/2 md:gap-4 xl:top-4 xl:right-4 xl:left-auto xl:translate-x-0"
+			>
 				<CorpusPicker
 					active={activeCorpus}
 					options={CORPORA}

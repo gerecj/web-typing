@@ -62,10 +62,13 @@ export function TypingSettingsBar({
 }: TypingSettingsBarProps) {
 	return (
 		// On phones the groups wrap on their own row below the top corners.
-		<div className="absolute inset-x-0 top-16 z-10 flex flex-wrap justify-center gap-2 px-4 md:inset-x-auto md:top-4 md:left-1/2 md:block md:-translate-x-1/2 md:px-0">
+		<div
+			data-hide-while-typing
+			className="absolute inset-x-0 top-16 z-10 flex flex-wrap justify-center gap-2 px-4 md:inset-x-auto md:top-4 md:left-1/2 md:block md:-translate-x-1/2 md:px-0"
+		>
 			{showPunctuation && (
 				<div
-					className={`whitespace-nowrap md:absolute md:top-0 md:right-full md:mr-4 ${controlStyles.group}`}
+					className={`whitespace-nowrap max-md:hidden md:absolute md:top-0 md:right-full md:mr-4 ${controlStyles.group}`}
 				>
 					<SettingItem active={punctuationEnabled} onSelect={onTogglePunctuation}>
 						punctuation

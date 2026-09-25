@@ -1,4 +1,4 @@
-import { type FormEvent, type SyntheticEvent, useRef } from "react";
+import { type FormEvent, type SyntheticEvent, useEffect, useRef } from "react";
 import type { useTyping } from "../hooks/useTyping";
 import { useTypingViewport } from "../hooks/useTypingViewport";
 
@@ -25,7 +25,13 @@ function getCharacterClass(typing: ReturnType<typeof useTyping>, absoluteIndex: 
 
 // Invisible input over the words, so tapping them opens the keyboard on phones.
 function TypingInput({ typing }: WordsProps) {
+	const inputRef = useRef<HTMLInputElement>(null);
 	const previousValueRef = useRef(INPUT_RESTING_VALUE);
+
+	// Close the phone keyboard when finished, so the results and settings are visible again.
+	useEffect(() => {
+		if (typing.status === "finished") inputRef.current?.blur();
+	}, [typing.status]);
 
 	function handleInput(event: FormEvent<HTMLInputElement>) {
 		const input = event.currentTarget;
@@ -58,6 +64,7 @@ function TypingInput({ typing }: WordsProps) {
 
 	return (
 		<input
+			ref={inputRef}
 			data-typing-input
 			aria-label="Typing input"
 			defaultValue={INPUT_RESTING_VALUE}
@@ -93,7 +100,7 @@ export function Words({ typing }: WordsProps) {
 				</div>
 
 				{/* Words */}
-				<div className="wrap-break-word relative h-[calc(3lh)] overflow-hidden whitespace-pre-wrap text-3xl leading-normal">
+				<div className="wrap-break-word relative h-[calc(3lh)] overflow-hidden whitespace-pre-wrap text-2xl leading-normal md:text-3xl">
 					{renderChars.map(({ char, absoluteIndex }) => {
 						return (
 							<span

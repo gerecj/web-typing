@@ -56,7 +56,7 @@ function RaceRoomPage() {
 					showPunctuation={race.room.settings.preset === "words"}
 				/>
 			)}
-			<div className="absolute top-4 right-4 z-30 flex items-start gap-4">
+			<div data-hide-while-typing className="absolute top-4 right-4 z-30 flex items-start gap-4">
 				{showRaceSettings && race.room && (
 					<CorpusPicker
 						active={race.room.settings.corpusId}
