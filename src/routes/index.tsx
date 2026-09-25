@@ -7,10 +7,11 @@ import { ThemePicker } from "../components/ThemePicker";
 import { TypingSettingsBar } from "../components/TypingSettingsBar";
 import { TypingStage } from "../components/TypingStage";
 import { Words } from "../components/Words";
-import { FALLBACK_WORDS, useCorpusData } from "../hooks/useCorpusData";
+import { useCorpusData } from "../hooks/useCorpusData";
 import { useTyping } from "../hooks/useTyping";
 import { useTypingDebugGrid } from "../hooks/useTypingDebugGrid";
 import { useTypingSettings } from "../hooks/useTypingSettings";
+import { pickQuote } from "../lib/passages";
 import {
 	CORPORA,
 	isCorpusId,
@@ -23,11 +24,6 @@ import {
 	type WordsOption,
 } from "../lib/typing-settings";
 import { buildTypingText } from "../lib/typing-text-provider";
-
-function randomFrom<T>(items: T[]): T | null {
-	if (items.length === 0) return null;
-	return items[Math.floor(Math.random() * items.length)] ?? null;
-}
 
 export const Route = createFileRoute("/")({ component: TypingPage });
 
@@ -65,12 +61,10 @@ function TypingPage() {
 		() => buildTypingText(words, targetWordCount, { enrichText: punctuationEnabled }),
 		[punctuationEnabled, targetWordCount, words],
 	);
-	const quoteTextProvider = useCallback(() => {
-		const availableQuotes = loadedQuotes?.path === quotePath ? loadedQuotes : null;
-		const selectedPool = availableQuotes?.buckets[quoteOption] ?? [];
-		const picked = randomFrom(selectedPool) ?? randomFrom(availableQuotes?.all ?? []);
-		return picked ?? FALLBACK_WORDS.join(" ");
-	}, [loadedQuotes, quoteOption, quotePath]);
+	const quoteTextProvider = useCallback(
+		() => pickQuote(loadedQuotes?.path === quotePath ? loadedQuotes : null, quoteOption),
+		[loadedQuotes, quoteOption, quotePath],
+	);
 	const typing = useTyping(words, targetWordCount, {
 		mode,
 		durationSec,

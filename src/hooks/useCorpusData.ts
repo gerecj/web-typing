@@ -1,64 +1,41 @@
 import { useEffect, useState } from "react";
 import {
-	CORPORA,
-	type CorpusId,
-	QUOTE_GROUP_INDEX,
-	QUOTE_OPTIONS,
-	type QuoteOption,
-	type TypingPreset,
-} from "../lib/typing-settings";
-
-export const FALLBACK_WORDS = ["the", "be", "to", "of", "and", "a", "in", "that", "have", "it"];
-
-interface QuoteItem {
-	text: string;
-	length: number;
-}
-
-interface QuotePayload {
-	groups?: Array<[number, number]>;
-	quotes?: QuoteItem[];
-}
+	FALLBACK_WORDS,
+	getCorpusPath,
+	getQuotePath,
+	parseCorpusWords,
+	parseQuotes,
+	type QuoteCollection,
+} from "../lib/passages";
+import type { CorpusId, TypingPreset } from "../lib/typing-settings";
 
 interface LoadedWords {
 	corpusId: CorpusId;
 	words: string[];
 }
 
-export interface LoadedQuotes {
+export interface LoadedQuotes extends QuoteCollection {
 	path: string;
-	buckets: Record<QuoteOption, string[]>;
-	all: string[];
-}
-
-export function getQuotePathForCorpus(corpusId: CorpusId): string {
-	return corpusId.startsWith("slovak") ? "/quotes/slovak.json" : "/quotes/english.json";
 }
 
 export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 	const [loadedWords, setLoadedWords] = useState<LoadedWords | null>(null);
 	const [loadedQuotes, setLoadedQuotes] = useState<LoadedQuotes | null>(null);
-	const quotePath = getQuotePathForCorpus(activeCorpus);
+	const quotePath = getQuotePath(activeCorpus);
 
 	useEffect(() => {
 		const controller = new AbortController();
 		let cancelled = false;
 
 		async function loadWords() {
-			const corpus = CORPORA.find((item) => item.id === activeCorpus) ?? CORPORA[0];
 			try {
-				const response = await fetch(corpus.path, { signal: controller.signal });
+				const response = await fetch(getCorpusPath(activeCorpus), { signal: controller.signal });
 				if (!response.ok) {
-					throw new Error(`Failed to fetch corpus '${corpus.id}' (${response.status})`);
+					throw new Error(`Failed to fetch corpus '${activeCorpus}' (${response.status})`);
 				}
-				const data = (await response.json()) as { words?: unknown };
-				if (Array.isArray(data.words) && data.words.every((word) => typeof word === "string")) {
-					if (!cancelled) {
-						setLoadedWords({ corpusId: activeCorpus, words: data.words });
-					}
-					return;
-				}
-				throw new Error(`Invalid corpus payload for '${corpus.id}'`);
+				const words = parseCorpusWords(await response.json());
+				if (!words) throw new Error(`Invalid corpus payload for '${activeCorpus}'`);
+				if (!cancelled) setLoadedWords({ corpusId: activeCorpus, words });
 			} catch (error) {
 				if (cancelled || controller.signal.aborted) return;
 
@@ -87,45 +64,15 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 				if (!response.ok) {
 					throw new Error(`Failed to fetch quotes (${response.status})`);
 				}
-
-				const data = (await response.json()) as QuotePayload;
-				const groups = Array.isArray(data.groups) ? data.groups : [];
-				const quotes =
-					Array.isArray(data.quotes) && data.quotes.every((quote) => typeof quote.text === "string")
-						? data.quotes
-						: [];
-				const all = quotes.map((quote) => quote.text);
-
-				const nextBuckets: Record<QuoteOption, string[]> = {
-					short: [],
-					medium: [],
-					long: [],
-				};
-
-				for (const option of QUOTE_OPTIONS) {
-					const range = groups[QUOTE_GROUP_INDEX[option]];
-					if (!range) continue;
-
-					const [min, max] = range;
-					nextBuckets[option] = quotes
-						.filter((quote) => quote.length >= min && quote.length <= max)
-						.map((quote) => quote.text);
-				}
-
-				if (!cancelled) {
-					setLoadedQuotes({ path: quotePath, buckets: nextBuckets, all });
-				}
+				const quotes = parseQuotes(await response.json());
+				if (!cancelled) setLoadedQuotes({ path: quotePath, ...quotes });
 			} catch (error) {
 				if (cancelled || controller.signal.aborted) return;
 
 				if (import.meta.env.DEV) {
 					console.warn(`[typing] Quote load failed for ${quotePath}.`, error);
 				}
-				setLoadedQuotes({
-					path: quotePath,
-					buckets: { short: [], medium: [], long: [] },
-					all: [],
-				});
+				setLoadedQuotes({ path: quotePath, ...parseQuotes(null) });
 			}
 		}
 
