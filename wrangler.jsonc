@@ -3,6 +3,8 @@
 	"name": "web-typing",
 	"main": "./src/server/index.ts",
 	"compatibility_date": "2026-04-13",
+	"workers_dev": true,
+	"preview_urls": false,
 	"assets": {
 		"directory": "./dist/client",
 		"binding": "ASSETS",
