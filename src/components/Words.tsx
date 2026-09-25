@@ -1,3 +1,4 @@
+import { type FormEvent, type SyntheticEvent, useRef } from "react";
 import type { useTyping } from "../hooks/useTyping";
 import { useTypingViewport } from "../hooks/useTypingViewport";
 
@@ -7,6 +8,8 @@ interface WordsProps {
 
 const CHAR_WINDOW = 200;
 const CURSOR_TRANSITION_MS = 100;
+// Kept in the hidden input so a touch keyboard Backspace always has something to delete.
+const INPUT_RESTING_VALUE = " ";
 
 function getCharacterClass(typing: ReturnType<typeof useTyping>, absoluteIndex: number): string {
 	let className = "text-(--text-muted)";
@@ -18,6 +21,55 @@ function getCharacterClass(typing: ReturnType<typeof useTyping>, absoluteIndex: 
 		}
 	}
 	return className;
+}
+
+// Invisible input over the words, so tapping them opens the keyboard on phones.
+function TypingInput({ typing }: WordsProps) {
+	const previousValueRef = useRef(INPUT_RESTING_VALUE);
+
+	function handleInput(event: FormEvent<HTMLInputElement>) {
+		const input = event.currentTarget;
+		const { inputType, isComposing } = event.nativeEvent as InputEvent;
+		if (inputType === "insertFromPaste") {
+			input.value = previousValueRef.current;
+			return;
+		}
+
+		// Diff against the previous value, which also works with autocorrect and IME compositions.
+		const previous = previousValueRef.current;
+		const next = input.value;
+		let common = 0;
+		while (common < previous.length && previous[common] === next[common]) common++;
+		for (let i = common; i < previous.length; i++) typing.deleteCharacter();
+		for (const char of next.slice(common)) typing.typeCharacter(char);
+		previousValueRef.current = next;
+
+		if (!isComposing && (next.length === 0 || next.endsWith(" "))) {
+			input.value = INPUT_RESTING_VALUE;
+			previousValueRef.current = INPUT_RESTING_VALUE;
+		}
+	}
+
+	function keepCaretAtEnd(event: SyntheticEvent<HTMLInputElement>) {
+		const input = event.currentTarget;
+		const end = input.value.length;
+		if (input.selectionStart !== end) input.setSelectionRange(end, end);
+	}
+
+	return (
+		<input
+			data-typing-input
+			aria-label="Typing input"
+			defaultValue={INPUT_RESTING_VALUE}
+			autoCapitalize="off"
+			autoComplete="off"
+			autoCorrect="off"
+			spellCheck={false}
+			onInput={handleInput}
+			onSelect={keepCaretAtEnd}
+			className="absolute inset-0 z-10 h-full w-full cursor-default text-base opacity-0"
+		/>
+	);
 }
 
 export function Words({ typing }: WordsProps) {
@@ -57,6 +109,7 @@ export function Words({ typing }: WordsProps) {
 					{/* Cursor */}
 					{typing.status !== "finished" && <span ref={cursorRef} className={cursorClass} />}
 				</div>
+				<TypingInput typing={typing} />
 				{/* <div className="pointer-events-none absolute top-full left-0 mt-4 text-(--text-muted) text-xs">
 					debug correct words: {typing.correctWords}
 				</div> */}

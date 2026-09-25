@@ -85,6 +85,16 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		});
 	}, [buildText, inputPolicy, scheduledStartTime]);
 
+	const typeCharacter = useCallback(
+		(key: string) => {
+			const time = performance.now();
+			if (scheduledStartTime !== null && time < scheduledStartTime) return;
+			dispatch({ type: "CHAR", key, time });
+		},
+		[scheduledStartTime],
+	);
+	const deleteCharacter = useCallback(() => dispatch({ type: "BACKSPACE" }), []);
+
 	const previousConfigRef = useRef({
 		buildText,
 		durationMs,
@@ -140,7 +150,8 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		if (!enabled) return;
 
 		function handleKeyDown(e: KeyboardEvent) {
-			if (isInteractiveTarget(e.target)) return;
+			const fromTypingInput = e.target instanceof HTMLElement && "typingInput" in e.target.dataset;
+			if (!fromTypingInput && isInteractiveTarget(e.target)) return;
 
 			if (e.key === "Tab") {
 				if (allowRestart) {
@@ -159,21 +170,21 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 				}
 				return;
 			}
+			// The hidden input handles text itself, since touch keyboards often send "Unidentified" keys.
+			if (fromTypingInput) return;
 
 			if (e.key === "Backspace") {
 				e.preventDefault();
-				dispatch({ type: "BACKSPACE" });
+				deleteCharacter();
 			} else if (e.key.length === 1) {
 				e.preventDefault();
-				const time = performance.now();
-				if (scheduledStartTime !== null && time < scheduledStartTime) return;
-				dispatch({ type: "CHAR", key: e.key, time });
+				typeCharacter(e.key);
 			}
 		}
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [allowRestart, enabled, reset, scheduledStartTime]);
+	}, [allowRestart, deleteCharacter, enabled, reset, typeCharacter]);
 
 	const [nowMs, setNowMs] = useState(0);
 
@@ -252,5 +263,7 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		durationMs,
 		appliedResetKey,
 		reset,
+		typeCharacter,
+		deleteCharacter,
 	};
 }
