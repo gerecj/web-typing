@@ -1,6 +1,7 @@
 import type { RaceSettings } from "../lib/race/protocol";
 import { calculateAccuracy, calculateWPMFromCorrectCharacters } from "../lib/typing-metrics";
 import {
+	MAX_FINISH_WPM,
 	MAX_RACE_PLAYERS,
 	MIN_RACE_PLAYERS,
 	type RoomPlayer,
@@ -294,7 +295,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 				break;
 			}
 
-			if (player.charIndex !== state.round.text.length) {
+			if (player.charIndex !== state.round.text.length || player.wpm > MAX_FINISH_WPM) {
 				return reject(current, "invalid_progress");
 			}
 

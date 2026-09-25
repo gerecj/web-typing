@@ -128,6 +128,18 @@ describe("race room state machine", () => {
 				now: 1_100,
 			}).error,
 		).toBe("invalid_progress");
+		expect(
+			transitionRoom(state, {
+				type: "finish",
+				playerId: "one",
+				roundId: "round-1",
+				charIndex: 3,
+				totalInputs: 3,
+				correctInputs: 3,
+				correctCharacters: 3,
+				now: 1_001,
+			}).error,
+		).toBe("invalid_progress");
 	});
 
 	it("allows progress to move backward after an edit", () => {

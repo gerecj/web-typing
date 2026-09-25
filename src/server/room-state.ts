@@ -2,6 +2,8 @@ import type { PlayerSnapshot, RaceSettings, RoomPhase, RoomSnapshot } from "../l
 
 export const MIN_RACE_PLAYERS = 1;
 export const MAX_RACE_PLAYERS = 6;
+// Well above human typing speed; only catches clients reporting impossible results.
+export const MAX_FINISH_WPM = 500;
 
 export interface RoomPlayer {
 	id: string;
