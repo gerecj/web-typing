@@ -6,8 +6,9 @@ import {
 	type QuoteOption,
 	type WordsOption,
 } from "../typing-settings";
+import { type ErrorRange, parseErrorRanges } from "./error-ranges";
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 export const MAX_PLAYER_NAME_LENGTH = 24;
 export const MAX_ROUND_ID_LENGTH = 64;
 
@@ -29,6 +30,7 @@ export interface PlayerSnapshot {
 	repeatReady: boolean;
 	charIndex: number;
 	correctCharacters: number;
+	errorRanges: ErrorRange[];
 	place: number | null;
 	wpm: number | null;
 	accuracy: number | null;
@@ -60,6 +62,7 @@ export type ClientMessage =
 			totalInputs: number;
 			correctInputs: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 	  })
 	| (VersionedMessage & {
 			type: "finish";
@@ -68,6 +71,7 @@ export type ClientMessage =
 			totalInputs: number;
 			correctInputs: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 	  })
 	| (VersionedMessage & { type: "set_repeat"; ready: boolean })
 	| (VersionedMessage & { type: "ping"; clientSentAt: number });
@@ -94,6 +98,7 @@ export type ServerMessage =
 			playerId: string;
 			charIndex: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 			wpm: number;
 	  })
 	| (VersionedMessage & {
@@ -102,7 +107,7 @@ export type ServerMessage =
 			playerId: string;
 			charIndex: number;
 			correctCharacters: number;
-			place: number;
+			errorRanges: ErrorRange[];
 			wpm: number;
 			accuracy: number;
 	  })
@@ -182,6 +187,8 @@ export function parseClientMessage(value: unknown): ClientMessage | null {
 			if (!isFiniteNonNegativeInteger(value.correctCharacters)) return null;
 			if (value.correctInputs > value.totalInputs) return null;
 			if (value.correctCharacters > value.charIndex) return null;
+			const errorRanges = parseErrorRanges(value.errorRanges, value.charIndex);
+			if (!errorRanges) return null;
 			return {
 				v: PROTOCOL_VERSION,
 				type: value.type,
@@ -190,6 +197,7 @@ export function parseClientMessage(value: unknown): ClientMessage | null {
 				totalInputs: value.totalInputs,
 				correctInputs: value.correctInputs,
 				correctCharacters: value.correctCharacters,
+				errorRanges,
 			};
 		}
 		case "ping":

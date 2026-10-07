@@ -117,6 +117,7 @@ export function useRaceSocket(code: string, name: string | null) {
 							...player,
 							charIndex: message.charIndex,
 							correctCharacters: message.correctCharacters,
+							errorRanges: message.errorRanges,
 							wpm: message.wpm,
 						})),
 					);
@@ -127,7 +128,7 @@ export function useRaceSocket(code: string, name: string | null) {
 							...player,
 							charIndex: message.charIndex,
 							correctCharacters: message.correctCharacters,
-							place: message.place,
+							errorRanges: message.errorRanges,
 							wpm: message.wpm,
 							accuracy: message.accuracy,
 						})),

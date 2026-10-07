@@ -113,7 +113,7 @@ function RaceRoomPage() {
 							textLength={race.activeRace.text.length}
 							currentPlayerId={race.playerId}
 							localCharIndex={race.typing.currentIndex}
-							localCorrectCharacters={race.typing.correctCharacterCount}
+							localErrorRanges={race.errorRanges}
 							localWpm={race.typing.liveWpm}
 						/>
 					}

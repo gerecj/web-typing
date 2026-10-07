@@ -19,6 +19,7 @@ function player(id: string, ready = false): RoomPlayer {
 		totalInputs: 0,
 		correctInputs: 0,
 		correctCharacters: 0,
+		errorRanges: [],
 		place: null,
 		wpm: null,
 		accuracy: null,
@@ -113,6 +114,7 @@ describe("race room state machine", () => {
 				totalInputs: 1,
 				correctInputs: 1,
 				correctCharacters: 1,
+				errorRanges: [],
 				now: 1_100,
 			}).error,
 		).toBe("invalid_round");
@@ -125,6 +127,7 @@ describe("race room state machine", () => {
 				totalInputs: 2,
 				correctInputs: 1,
 				correctCharacters: 3,
+				errorRanges: [],
 				now: 1_100,
 			}).error,
 		).toBe("invalid_progress");
@@ -137,6 +140,7 @@ describe("race room state machine", () => {
 				totalInputs: 3,
 				correctInputs: 3,
 				correctCharacters: 3,
+				errorRanges: [],
 				now: 1_001,
 			}).error,
 		).toBe("invalid_progress");
@@ -152,6 +156,7 @@ describe("race room state machine", () => {
 			totalInputs: 2,
 			correctInputs: 2,
 			correctCharacters: 2,
+			errorRanges: [],
 			now: 1_100,
 		}).state;
 		const result = transitionRoom(state, {
@@ -162,6 +167,7 @@ describe("race room state machine", () => {
 			totalInputs: 2,
 			correctInputs: 2,
 			correctCharacters: 1,
+			errorRanges: [],
 			now: 1_200,
 		});
 
@@ -169,6 +175,7 @@ describe("race room state machine", () => {
 		expect(result.state.players.one).toMatchObject({
 			charIndex: 1,
 			correctCharacters: 1,
+			errorRanges: [],
 			wpm: 60,
 		});
 		expect(result.effects).toContainEqual({
@@ -177,23 +184,38 @@ describe("race room state machine", () => {
 			roundId: "round-1",
 			charIndex: 1,
 			correctCharacters: 1,
+			errorRanges: [],
 			wpm: 60,
 		});
 	});
 
-	it("assigns finish order and server-derived results", () => {
+	it("ranks finishers by wpm, so finishing first with more mistakes can lose", () => {
 		let state = racingRoom();
-		state = transitionRoom(state, {
+		const sloppy = transitionRoom(state, {
 			type: "finish",
 			playerId: "two",
 			roundId: "round-1",
 			charIndex: 3,
-			totalInputs: 4,
-			correctInputs: 3,
-			correctCharacters: 2,
+			totalInputs: 3,
+			correctInputs: 1,
+			correctCharacters: 1,
+			errorRanges: [[1, 3]],
 			now: 2_000,
-		}).state;
-		const result = transitionRoom(state, {
+		});
+		expect(sloppy.state.phase).toBe("racing");
+		expect(sloppy.state.players.two).toMatchObject({ place: null, accuracy: 33, wpm: 12 });
+		expect(sloppy.effects).toContainEqual({
+			type: "player_finished",
+			playerId: "two",
+			roundId: "round-1",
+			charIndex: 3,
+			correctCharacters: 1,
+			errorRanges: [[1, 3]],
+			wpm: 12,
+			accuracy: 33,
+		});
+
+		state = transitionRoom(sloppy.state, {
 			type: "finish",
 			playerId: "one",
 			roundId: "round-1",
@@ -201,22 +223,36 @@ describe("race room state machine", () => {
 			totalInputs: 3,
 			correctInputs: 3,
 			correctCharacters: 3,
+			errorRanges: [],
 			now: 3_000,
-		});
+		}).state;
 
-		expect(result.state.phase).toBe("results");
-		expect(result.state.players.two).toMatchObject({ place: 1, accuracy: 75, wpm: 24 });
-		expect(result.state.players.one).toMatchObject({ place: 2, accuracy: 100, wpm: 18 });
-		expect(result.effects).toContainEqual({
-			type: "player_finished",
-			playerId: "one",
-			roundId: "round-1",
-			charIndex: 3,
-			correctCharacters: 3,
-			place: 2,
-			wpm: 18,
-			accuracy: 100,
-		});
+		expect(state.phase).toBe("results");
+		expect(state.players.one).toMatchObject({ place: 1, accuracy: 100, wpm: 18 });
+		expect(state.players.two).toMatchObject({ place: 2, accuracy: 33, wpm: 12 });
+	});
+
+	it("breaks equal wpm by accuracy before finish time", () => {
+		let state = racingRoom();
+		for (const [playerId, totalInputs, now] of [
+			["one", 4, 2_000],
+			["two", 3, 2_010],
+		] as const) {
+			state = transitionRoom(state, {
+				type: "finish",
+				playerId,
+				roundId: "round-1",
+				charIndex: 3,
+				totalInputs,
+				correctInputs: 3,
+				correctCharacters: 3,
+				errorRanges: [],
+				now,
+			}).state;
+		}
+
+		expect(state.players.one).toMatchObject({ wpm: 36, accuracy: 75, place: 2 });
+		expect(state.players.two).toMatchObject({ wpm: 36, accuracy: 100, place: 1 });
 	});
 
 	it("removes a player who leaves the waiting lobby and transfers host authority", () => {
@@ -258,6 +294,7 @@ describe("race room state machine", () => {
 			totalInputs: 3,
 			correctInputs: 3,
 			correctCharacters: 3,
+			errorRanges: [],
 			now: 2_000,
 		}).state;
 		state = transitionRoom(state, {
@@ -268,6 +305,8 @@ describe("race room state machine", () => {
 
 		expect(state.phase).toBe("results");
 		expect(state.players.two.didNotFinish).toBe(true);
+		expect(state.players.one.place).toBe(1);
+		expect(state.players.two.place).toBeNull();
 
 		const repeat = transitionRoom(state, {
 			type: "set_repeat",
@@ -301,6 +340,7 @@ describe("race room state machine", () => {
 				totalInputs: 3,
 				correctInputs: 3,
 				correctCharacters: 3,
+				errorRanges: [],
 				now,
 			}).state;
 		}
@@ -337,6 +377,7 @@ describe("race room state machine", () => {
 				totalInputs: 3,
 				correctInputs: 3,
 				correctCharacters: 3,
+				errorRanges: [],
 				now: 2_000,
 			}).state;
 		}
@@ -383,6 +424,7 @@ describe("race room state machine", () => {
 				totalInputs: 3,
 				correctInputs: 3,
 				correctCharacters: 3,
+				errorRanges: [],
 				now,
 			}).state;
 		}

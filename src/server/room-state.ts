@@ -1,3 +1,4 @@
+import type { ErrorRange } from "../lib/race/error-ranges";
 import type { PlayerSnapshot, RaceSettings, RoomPhase, RoomSnapshot } from "../lib/race/protocol";
 
 export const MIN_RACE_PLAYERS = 1;
@@ -15,6 +16,8 @@ export interface RoomPlayer {
 	totalInputs: number;
 	correctInputs: number;
 	correctCharacters: number;
+	errorRanges: ErrorRange[];
+	/** Final standing, assigned when the round ends. */
 	place: number | null;
 	wpm: number | null;
 	accuracy: number | null;
@@ -72,6 +75,7 @@ function toPlayerSnapshot(player: RoomPlayer): PlayerSnapshot {
 		repeatReady: player.repeatReady,
 		charIndex: player.charIndex,
 		correctCharacters: player.correctCharacters,
+		errorRanges: player.errorRanges,
 		place: player.place,
 		wpm: player.wpm,
 		accuracy: player.accuracy,

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { findErrorRanges } from "../../lib/race/error-ranges";
 import { type ClientMessage, PROTOCOL_VERSION } from "../../lib/race/protocol";
 import { useTyping } from "../useTyping";
 import { useRaceSocket } from "./useRaceSocket";
@@ -18,6 +19,10 @@ export function useRace(code: string, name: string | null) {
 		allowRestart: false,
 		resetKey: activeRace?.roundId,
 	});
+	const errorRanges = useMemo(
+		() => findErrorRanges(typing.text, typing.input),
+		[typing.text, typing.input],
+	);
 	const lastProgressSentAtRef = useRef(0);
 	const pendingProgressTimerRef = useRef<number | null>(null);
 	const finishSentForRoundRef = useRef<string | null>(null);
@@ -34,6 +39,7 @@ export function useRace(code: string, name: string | null) {
 			totalInputs: typing.totalInputs,
 			correctInputs: typing.correctInputs,
 			correctCharacters: typing.correctCharacterCount,
+			errorRanges,
 		};
 
 		if (typing.status === "finished") {
@@ -86,6 +92,7 @@ export function useRace(code: string, name: string | null) {
 	}, [
 		activeRace?.roundId,
 		connection.send,
+		errorRanges,
 		typing.appliedResetKey,
 		typing.correctInputs,
 		typing.correctCharacterCount,
@@ -99,5 +106,5 @@ export function useRace(code: string, name: string | null) {
 		lastProgressSentAtRef.current = 0;
 	}, [activeRace?.roundId]);
 
-	return { ...connection, typing };
+	return { ...connection, typing, errorRanges };
 }

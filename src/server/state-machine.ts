@@ -1,3 +1,4 @@
+import type { ErrorRange } from "../lib/race/error-ranges";
 import type { RaceSettings } from "../lib/race/protocol";
 import { calculateAccuracy, calculateWPMFromCorrectCharacters } from "../lib/typing-metrics";
 import {
@@ -27,6 +28,7 @@ export type RoomEvent =
 			totalInputs: number;
 			correctInputs: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 			now: number;
 	  }
 	| {
@@ -37,6 +39,7 @@ export type RoomEvent =
 			totalInputs: number;
 			correctInputs: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 			now: number;
 	  }
 	| { type: "set_repeat"; playerId: string; ready: boolean; now: number }
@@ -51,6 +54,7 @@ export type RoomEffect =
 			roundId: string;
 			charIndex: number;
 			correctCharacters: number;
+			errorRanges: ErrorRange[];
 			wpm: number;
 	  }
 	| {
@@ -59,7 +63,7 @@ export type RoomEffect =
 			roundId: string;
 			charIndex: number;
 			correctCharacters: number;
-			place: number;
+			errorRanges: ErrorRange[];
 			wpm: number;
 			accuracy: number;
 	  }
@@ -113,6 +117,7 @@ function resetRoundPlayer(player: RoomPlayer) {
 	player.totalInputs = 0;
 	player.correctInputs = 0;
 	player.correctCharacters = 0;
+	player.errorRanges = [];
 	player.place = null;
 	player.wpm = null;
 	player.accuracy = null;
@@ -144,12 +149,27 @@ function reconcileRematch(state: RoomState, effects: RoomEffect[]) {
 	}
 }
 
+// Everyone types the same passage, so WPM over correct characters decides the race. Accuracy and
+// then finishing earlier only break ties, which mostly happen because WPM is rounded.
+function assignPlaces(players: RoomPlayer[]) {
+	const finishers = players
+		.filter((player) => player.finishedAt !== null)
+		.sort(
+			(left, right) =>
+				(right.wpm ?? 0) - (left.wpm ?? 0) ||
+				(right.accuracy ?? 0) - (left.accuracy ?? 0) ||
+				(left.finishedAt ?? 0) - (right.finishedAt ?? 0),
+		);
+	for (const [index, player] of finishers.entries()) player.place = index + 1;
+}
+
 function finishRoundIfComplete(state: RoomState, effects: RoomEffect[]) {
 	if (state.phase !== "racing" || !state.round) return;
 	const players = Object.values(state.players);
 	if (players.length === 0) return;
-	if (!players.every((player) => player.place !== null || player.didNotFinish)) return;
+	if (!players.every((player) => player.finishedAt !== null || player.didNotFinish)) return;
 
+	assignPlaces(players);
 	state.phase = "results";
 	for (const player of players) {
 		player.ready = false;
@@ -190,7 +210,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 
 			if (state.phase === "racing") {
 				player.connected = false;
-				if (player.place === null) player.didNotFinish = true;
+				if (player.finishedAt === null) player.didNotFinish = true;
 				assignNewHost(state);
 				finishRoundIfComplete(state, effects);
 			} else {
@@ -262,7 +282,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			if (event.roundId !== state.round.id) return reject(current, "invalid_round");
 			const player = state.players[event.playerId];
 			if (!player || player.didNotFinish) return reject(current, "not_found");
-			if (player.place !== null) return { state: current, effects: [] };
+			if (player.finishedAt !== null) return { state: current, effects: [] };
 			if (
 				event.charIndex > state.round.text.length ||
 				event.totalInputs < player.totalInputs ||
@@ -277,6 +297,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			player.totalInputs = event.totalInputs;
 			player.correctInputs = event.correctInputs;
 			player.correctCharacters = event.correctCharacters;
+			player.errorRanges = event.errorRanges;
 			player.wpm = calculateWPMFromCorrectCharacters(
 				state.round.startsAt,
 				event.now,
@@ -290,6 +311,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 					roundId: state.round.id,
 					charIndex: player.charIndex,
 					correctCharacters: player.correctCharacters,
+					errorRanges: player.errorRanges,
 					wpm: player.wpm,
 				});
 				break;
@@ -299,8 +321,6 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 				return reject(current, "invalid_progress");
 			}
 
-			player.place =
-				Math.max(0, ...Object.values(state.players).map((candidate) => candidate.place ?? 0)) + 1;
 			player.accuracy = calculateAccuracy(player.totalInputs, player.correctInputs);
 			player.finishedAt = event.now;
 			effects.push({
@@ -309,7 +329,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 				roundId: state.round.id,
 				charIndex: player.charIndex,
 				correctCharacters: player.correctCharacters,
-				place: player.place,
+				errorRanges: player.errorRanges,
 				wpm: player.wpm,
 				accuracy: player.accuracy,
 			});
@@ -333,7 +353,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 
 			if (state.phase === "racing" && state.round && event.now >= state.round.deadlineAt) {
 				for (const player of Object.values(state.players)) {
-					if (player.place === null) player.didNotFinish = true;
+					if (player.finishedAt === null) player.didNotFinish = true;
 				}
 				finishRoundIfComplete(state, effects);
 			}

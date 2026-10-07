@@ -31,6 +31,22 @@ describe("race protocol", () => {
 		).toBeNull();
 	});
 
+	it("carries mistake positions with progress and rejects ranges past the cursor", () => {
+		const progress = {
+			v: PROTOCOL_VERSION,
+			type: "progress",
+			roundId: "round-1",
+			charIndex: 5,
+			totalInputs: 6,
+			correctInputs: 4,
+			correctCharacters: 4,
+			errorRanges: [[2, 3]],
+		};
+		expect(parseClientMessage(progress)).toEqual(progress);
+		expect(parseClientMessage({ ...progress, errorRanges: [[4, 6]] })).toBeNull();
+		expect(parseClientMessage({ ...progress, errorRanges: undefined })).toBeNull();
+	});
+
 	it("accepts only supported race settings", () => {
 		expect(
 			parseRaceSettings({

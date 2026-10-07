@@ -170,6 +170,7 @@ export class RaceRoom extends DurableObject<Env> {
 			totalInputs: 0,
 			correctInputs: 0,
 			correctCharacters: 0,
+			errorRanges: [],
 			place: null,
 			wpm: null,
 			accuracy: null,
@@ -237,6 +238,7 @@ export class RaceRoom extends DurableObject<Env> {
 					totalInputs: message.totalInputs,
 					correctInputs: message.correctInputs,
 					correctCharacters: message.correctCharacters,
+					errorRanges: message.errorRanges,
 					now,
 				};
 				break;
@@ -356,6 +358,7 @@ export class RaceRoom extends DurableObject<Env> {
 					playerId: effect.playerId,
 					charIndex: effect.charIndex,
 					correctCharacters: effect.correctCharacters,
+					errorRanges: effect.errorRanges,
 					wpm: effect.wpm,
 				});
 				break;
@@ -367,7 +370,7 @@ export class RaceRoom extends DurableObject<Env> {
 					playerId: effect.playerId,
 					charIndex: effect.charIndex,
 					correctCharacters: effect.correctCharacters,
-					place: effect.place,
+					errorRanges: effect.errorRanges,
 					wpm: effect.wpm,
 					accuracy: effect.accuracy,
 				});
