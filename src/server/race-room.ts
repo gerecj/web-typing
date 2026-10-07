@@ -259,7 +259,7 @@ export class RaceRoom extends DurableObject<Env> {
 		if (shouldPersist && message.type === "progress") this.lastProgressPersistAt = now;
 	}
 
-	private async beginRound(now: number) {
+	private async beginRound() {
 		// Other messages are handled while the passage loads, so ignore repeated start requests.
 		if (!this.room || this.roundStarting) return;
 		this.roundStarting = true;
@@ -275,6 +275,8 @@ export class RaceRoom extends DurableObject<Env> {
 			this.roundStarting = false;
 		}
 
+		// Time the countdown from when the passage is ready, so loading it doesn't shorten it.
+		const now = Date.now();
 		const round: RoomRound = {
 			id: crypto.randomUUID(),
 			text,
@@ -329,7 +331,7 @@ export class RaceRoom extends DurableObject<Env> {
 			requestRound ||= effect.type === "round_requested";
 			this.emitEffect(effect);
 		}
-		if (requestRound) await this.beginRound(now);
+		if (requestRound) await this.beginRound();
 	}
 
 	private emitEffect(effect: RoomEffect) {
