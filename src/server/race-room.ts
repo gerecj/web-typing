@@ -359,7 +359,6 @@ export class RaceRoom extends DurableObject<Env> {
 					roundId: effect.roundId,
 					playerId: effect.playerId,
 					charIndex: effect.charIndex,
-					correctCharacters: effect.correctCharacters,
 					errorRanges: effect.errorRanges,
 					wpm: effect.wpm,
 				});
@@ -371,7 +370,6 @@ export class RaceRoom extends DurableObject<Env> {
 					roundId: effect.roundId,
 					playerId: effect.playerId,
 					charIndex: effect.charIndex,
-					correctCharacters: effect.correctCharacters,
 					errorRanges: effect.errorRanges,
 					wpm: effect.wpm,
 					accuracy: effect.accuracy,

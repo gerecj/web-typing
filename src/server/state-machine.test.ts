@@ -183,7 +183,6 @@ describe("race room state machine", () => {
 			playerId: "one",
 			roundId: "round-1",
 			charIndex: 1,
-			correctCharacters: 1,
 			errorRanges: [],
 			wpm: 60,
 		});
@@ -209,7 +208,6 @@ describe("race room state machine", () => {
 			playerId: "two",
 			roundId: "round-1",
 			charIndex: 3,
-			correctCharacters: 1,
 			errorRanges: [[1, 3]],
 			wpm: 12,
 			accuracy: 33,

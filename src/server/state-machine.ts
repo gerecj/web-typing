@@ -53,7 +53,6 @@ export type RoomEffect =
 			playerId: string;
 			roundId: string;
 			charIndex: number;
-			correctCharacters: number;
 			errorRanges: ErrorRange[];
 			wpm: number;
 	  }
@@ -62,7 +61,6 @@ export type RoomEffect =
 			playerId: string;
 			roundId: string;
 			charIndex: number;
-			correctCharacters: number;
 			errorRanges: ErrorRange[];
 			wpm: number;
 			accuracy: number;
@@ -310,7 +308,6 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 					playerId: player.id,
 					roundId: state.round.id,
 					charIndex: player.charIndex,
-					correctCharacters: player.correctCharacters,
 					errorRanges: player.errorRanges,
 					wpm: player.wpm,
 				});
@@ -328,7 +325,6 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 				playerId: player.id,
 				roundId: state.round.id,
 				charIndex: player.charIndex,
-				correctCharacters: player.correctCharacters,
 				errorRanges: player.errorRanges,
 				wpm: player.wpm,
 				accuracy: player.accuracy,

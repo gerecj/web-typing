@@ -74,7 +74,6 @@ function toPlayerSnapshot(player: RoomPlayer): PlayerSnapshot {
 		ready: player.ready,
 		repeatReady: player.repeatReady,
 		charIndex: player.charIndex,
-		correctCharacters: player.correctCharacters,
 		errorRanges: player.errorRanges,
 		place: player.place,
 		wpm: player.wpm,

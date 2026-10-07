@@ -116,7 +116,6 @@ export function useRaceSocket(code: string, name: string | null) {
 						updatePlayer(current, message.playerId, (player) => ({
 							...player,
 							charIndex: message.charIndex,
-							correctCharacters: message.correctCharacters,
 							errorRanges: message.errorRanges,
 							wpm: message.wpm,
 						})),
@@ -127,7 +126,6 @@ export function useRaceSocket(code: string, name: string | null) {
 						updatePlayer(current, message.playerId, (player) => ({
 							...player,
 							charIndex: message.charIndex,
-							correctCharacters: message.correctCharacters,
 							errorRanges: message.errorRanges,
 							wpm: message.wpm,
 							accuracy: message.accuracy,

@@ -29,7 +29,6 @@ export interface PlayerSnapshot {
 	ready: boolean;
 	repeatReady: boolean;
 	charIndex: number;
-	correctCharacters: number;
 	errorRanges: ErrorRange[];
 	place: number | null;
 	wpm: number | null;
@@ -97,7 +96,6 @@ export type ServerMessage =
 			roundId: string;
 			playerId: string;
 			charIndex: number;
-			correctCharacters: number;
 			errorRanges: ErrorRange[];
 			wpm: number;
 	  })
@@ -106,7 +104,6 @@ export type ServerMessage =
 			roundId: string;
 			playerId: string;
 			charIndex: number;
-			correctCharacters: number;
 			errorRanges: ErrorRange[];
 			wpm: number;
 			accuracy: number;
