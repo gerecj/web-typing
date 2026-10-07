@@ -29,9 +29,22 @@ export function RaceResults({ room, currentPlayerId, onRepeat }: RaceResultsProp
 						<span className="font-bold text-(--accent)">
 							{player.place === null ? "DNF" : `#${player.place}`}
 						</span>
-						<span className="text-(--text)">
-							{player.name}
-							{player.id === currentPlayerId ? " (you)" : ""}
+						<span
+							className={`flex flex-wrap items-baseline gap-x-3 ${
+								player.connected ? "text-(--text)" : "text-(--text-muted)"
+							}`}
+						>
+							<span>
+								{player.name}
+								{player.id === currentPlayerId ? " (you)" : ""}
+							</span>
+							{!player.connected ? (
+								<span className="whitespace-nowrap">left</span>
+							) : player.repeatReady ? (
+								<span className="whitespace-nowrap text-(--accent)">
+									<span className="sr-only sm:not-sr-only">ready </span>✓
+								</span>
+							) : null}
 						</span>
 						<span className="text-(--text-muted)">
 							{player.wpm === null ? "—" : `${player.wpm} wpm`}
@@ -47,10 +60,10 @@ export function RaceResults({ room, currentPlayerId, onRepeat }: RaceResultsProp
 				<button
 					type="button"
 					onClick={() => onRepeat(!currentPlayer?.repeatReady)}
-					className={`rounded-md px-5 py-2 transition ${
+					className={`rounded-md border border-(--accent) px-5 py-2 transition ${
 						currentPlayer?.repeatReady
 							? "bg-(--accent) text-(--bg)"
-							: "border border-(--accent) text-(--accent) hover:bg-(--accent)/10"
+							: "text-(--accent) hover:bg-(--accent)/10"
 					}`}
 				>
 					{currentPlayer?.repeatReady ? "waiting for others…" : "race again"}
