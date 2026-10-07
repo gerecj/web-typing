@@ -1,15 +1,9 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ReactNode } from "react";
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 import { themes } from "../themes";
-
-interface MyRouterContext {
-	queryClient: QueryClient;
-}
 
 // Apply stored theme before paint to prevent flash
 const THEME_INIT_SCRIPT = `
@@ -33,7 +27,7 @@ const THEME_INIT_SCRIPT = `
 	})();
 `;
 
-export const Route = createRootRouteWithContext<MyRouterContext>()({
+export const Route = createRootRoute({
 	head: () => ({
 		meta: [
 			{
@@ -97,7 +91,6 @@ function RootDocument({ children }: { children: ReactNode }) {
 							name: "Tanstack Router",
 							render: <TanStackRouterDevtoolsPanel />,
 						},
-						TanStackQueryDevtools,
 					]}
 				/>
 				<Scripts />

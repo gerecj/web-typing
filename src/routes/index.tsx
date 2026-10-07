@@ -73,7 +73,7 @@ function TypingPage() {
 		() => pickQuote(loadedQuotes?.path === quotePath ? loadedQuotes : null, quoteOption),
 		[loadedQuotes, quoteOption, quotePath],
 	);
-	const typing = useTyping(words, targetWordCount, {
+	const typing = useTyping({
 		mode,
 		durationSec,
 		textProvider: preset === "quote" ? quoteTextProvider : wordsTextProvider,

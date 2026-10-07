@@ -18,7 +18,7 @@ interface QuotePayload {
 	quotes?: Array<{ text: string; length: number }>;
 }
 
-export function randomFrom<T>(items: readonly T[]): T | null {
+function randomFrom<T>(items: readonly T[]): T | null {
 	if (items.length === 0) return null;
 	return items[Math.floor(Math.random() * items.length)] ?? null;
 }

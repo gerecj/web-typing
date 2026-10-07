@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useDropdown } from "../hooks/useDropdown";
 import { controlStyles } from "../lib/controlStyles";
 import { applyTheme, getStoredTheme, themes } from "../themes";
 
@@ -8,43 +9,7 @@ interface ThemePickerProps {
 
 export function ThemePicker({ className = "" }: ThemePickerProps) {
 	const [active, setActive] = useState(getStoredTheme);
-	const [open, setOpen] = useState(false);
-	const rootRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!open) return;
-
-		function handleKeyDown(e: KeyboardEvent) {
-			if (
-				e.key === "Escape" ||
-				e.key === "Backspace" ||
-				(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey)
-			) {
-				setOpen(false);
-			}
-		}
-
-		function handlePointerDown(e: MouseEvent) {
-			if (!rootRef.current?.contains(e.target as Node)) {
-				setOpen(false);
-			}
-		}
-
-		function handleFocusIn(e: FocusEvent) {
-			if (!rootRef.current?.contains(e.target as Node)) {
-				setOpen(false);
-			}
-		}
-
-		document.addEventListener("mousedown", handlePointerDown);
-		document.addEventListener("focusin", handleFocusIn);
-		window.addEventListener("keydown", handleKeyDown);
-		return () => {
-			document.removeEventListener("mousedown", handlePointerDown);
-			document.removeEventListener("focusin", handleFocusIn);
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [open]);
+	const { open, setOpen, rootRef } = useDropdown();
 
 	function select(name: string) {
 		applyTheme(name);

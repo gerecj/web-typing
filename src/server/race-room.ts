@@ -9,8 +9,8 @@ import {
 import { getNextRoomDeadline } from "./deadlines";
 import { generateRacePassage } from "./passage-service";
 import {
+	createRoomPlayer,
 	createRoomState,
-	type RoomPlayer,
 	type RoomRound,
 	type RoomState,
 	toRoomSnapshot,
@@ -160,23 +160,7 @@ export class RaceRoom extends DurableObject<Env> {
 
 		const now = Date.now();
 		const playerId = crypto.randomUUID();
-		const player: RoomPlayer = {
-			id: playerId,
-			name: message.name,
-			connected: true,
-			ready: false,
-			repeatReady: false,
-			charIndex: 0,
-			totalInputs: 0,
-			correctInputs: 0,
-			correctCharacters: 0,
-			errorRanges: [],
-			place: null,
-			wpm: null,
-			accuracy: null,
-			finishedAt: null,
-			didNotFinish: false,
-		};
+		const player = createRoomPlayer(playerId, message.name);
 		const transition = transitionRoom(this.room, { type: "join", player, now });
 
 		if (transition.error) {
@@ -229,19 +213,11 @@ export class RaceRoom extends DurableObject<Env> {
 				event = { type: "set_settings", playerId, settings: message.settings, now };
 				break;
 			case "progress":
-			case "finish":
-				event = {
-					type: message.type,
-					playerId,
-					roundId: message.roundId,
-					charIndex: message.charIndex,
-					totalInputs: message.totalInputs,
-					correctInputs: message.correctInputs,
-					correctCharacters: message.correctCharacters,
-					errorRanges: message.errorRanges,
-					now,
-				};
+			case "finish": {
+				const { v: _version, ...report } = message;
+				event = { ...report, playerId, now };
 				break;
+			}
 			case "set_repeat":
 				event = { type: "set_repeat", playerId, ready: message.ready, now };
 				break;

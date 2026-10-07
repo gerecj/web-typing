@@ -117,9 +117,6 @@ export function Words({ typing }: WordsProps) {
 					{typing.status !== "finished" && <span ref={cursorRef} className={cursorClass} />}
 				</div>
 				<TypingInput typing={typing} />
-				{/* <div className="pointer-events-none absolute top-full left-0 mt-4 text-(--text-muted) text-xs">
-					debug correct words: {typing.correctWords}
-				</div> */}
 			</div>
 		</div>
 	);

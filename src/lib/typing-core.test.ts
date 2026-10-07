@@ -4,7 +4,6 @@ import {
 	calculateAccuracy,
 	calculateWPM,
 	computeWordCorrectness,
-	countCorrectWords,
 	countTypedWords,
 } from "./typing-metrics";
 
@@ -50,39 +49,10 @@ describe("typing core", () => {
 		expect(state).toMatchObject({ totalInputs: 10, correctInputs: 9 });
 	});
 
-	it("keeps strict input on the current character while counting failed attempts", () => {
-		let state = typingReducer(initialTypingState, {
-			type: "RESET",
-			text: "cat",
-			inputPolicy: "strict",
-		});
-
-		state = typingReducer(state, { type: "CHAR", key: "x", time: 100 });
-		expect(state).toMatchObject({
-			input: "",
-			totalInputs: 1,
-			correctInputs: 0,
-			startTime: 100,
-			status: "typing",
-		});
-
-		state = typingReducer(state, { type: "CHAR", key: "c", time: 200 });
-		expect(state).toMatchObject({
-			input: "c",
-			totalInputs: 2,
-			correctInputs: 1,
-			startTime: 100,
-			status: "typing",
-		});
-
-		expect(typingReducer(state, { type: "BACKSPACE" })).toBe(state);
-	});
-
 	it("uses a scheduled start and ignores early input", () => {
 		const ready = typingReducer(initialTypingState, {
 			type: "RESET",
 			text: "a",
-			inputPolicy: "strict",
 			startTime: 1_000,
 		});
 		const early = typingReducer(ready, { type: "CHAR", key: "a", time: 999 });
@@ -104,7 +74,6 @@ describe("typing core", () => {
 
 		expect(wordCorrectness).toEqual([true, true, true, true, false, false, false]);
 		expect(countTypedWords(text, correctKeys.length)).toBe(2);
-		expect(countCorrectWords(text, wordCorrectness)).toBe(1);
 		expect(calculateAccuracy(7, 6)).toBe(86);
 		expect(calculateWPM(0, 60_000, correctKeys)).toBe(1);
 	});

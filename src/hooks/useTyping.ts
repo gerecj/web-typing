@@ -1,29 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
-import {
-	type InputPolicy,
-	initialTypingState,
-	type TypingState,
-	typingReducer,
-} from "../lib/typing-engine";
+import { initialTypingState, typingReducer } from "../lib/typing-engine";
 import {
 	calculateAccuracy,
 	calculateWPM,
 	computeWordCorrectness,
-	countCorrectWords,
 	countTypedWords,
 } from "../lib/typing-metrics";
-import { buildTypingText } from "../lib/typing-text-provider";
-
-export type StartPolicy = "first-key" | "scheduled";
 
 export interface UseTypingOptions {
+	/** A fixed passage, as in races. */
+	text?: string;
+	/** Builds a fresh passage on every reset, as in solo. */
+	textProvider?: () => string;
 	mode?: "words" | "time";
 	durationSec?: number;
-	textProvider?: () => string;
-	text?: string;
 	enabled?: boolean;
-	inputPolicy?: InputPolicy;
-	startPolicy?: StartPolicy;
+	/** A performance.now() time to start from; earlier input is ignored. Otherwise the first key starts. */
 	scheduledStartTime?: number;
 	allowRestart?: boolean;
 	resetKey?: string | number;
@@ -38,52 +30,25 @@ export function isInteractiveTarget(target: EventTarget | null): boolean {
 	);
 }
 
-export function useTyping(words: string[], numWords: number, options?: UseTypingOptions) {
-	const mode = options?.mode ?? "words";
-	const durationMs = (options?.durationSec ?? 30) * 1000;
-	const enabled = options?.enabled ?? true;
-	const inputPolicy = options?.inputPolicy ?? "free";
-	const startPolicy = options?.startPolicy ?? "first-key";
-	const scheduledStartTime =
-		startPolicy === "scheduled" ? (options?.scheduledStartTime ?? null) : null;
-	const allowRestart = options?.allowRestart ?? true;
-	const resetKey = options?.resetKey;
-	const authoritativeText = options?.text;
-	const defaultTextProvider = useCallback(
-		() => buildTypingText(words, numWords),
-		[words, numWords],
-	);
-	const configuredTextProvider = options?.textProvider;
-	const buildText = useCallback(
-		() => authoritativeText ?? configuredTextProvider?.() ?? defaultTextProvider(),
-		[authoritativeText, configuredTextProvider, defaultTextProvider],
-	);
+export function useTyping(options: UseTypingOptions) {
+	const { text, textProvider, resetKey } = options;
+	const mode = options.mode ?? "words";
+	const durationMs = (options.durationSec ?? 30) * 1000;
+	const enabled = options.enabled ?? true;
+	const scheduledStartTime = options.scheduledStartTime ?? null;
+	const allowRestart = options.allowRestart ?? true;
+	const buildText = useCallback(() => text ?? textProvider?.() ?? "", [text, textProvider]);
 
-	const [state, dispatch] = useReducer(
-		typingReducer,
-		{ buildText, inputPolicy, scheduledStartTime },
-		({
-			buildText: initialBuildText,
-			inputPolicy: initialInputPolicy,
-			scheduledStartTime: initialStart,
-		}) =>
-			({
-				...initialTypingState,
-				text: initialBuildText(),
-				inputPolicy: initialInputPolicy,
-				startTime: initialStart,
-			}) satisfies TypingState,
-	);
+	const [state, dispatch] = useReducer(typingReducer, null, () => ({
+		...initialTypingState,
+		text: buildText(),
+		startTime: scheduledStartTime,
+	}));
 	const [appliedResetKey, setAppliedResetKey] = useState(resetKey);
 
 	const reset = useCallback(() => {
-		dispatch({
-			type: "RESET",
-			text: buildText(),
-			inputPolicy,
-			startTime: scheduledStartTime,
-		});
-	}, [buildText, inputPolicy, scheduledStartTime]);
+		dispatch({ type: "RESET", text: buildText(), startTime: scheduledStartTime });
+	}, [buildText, scheduledStartTime]);
 
 	const typeCharacter = useCallback(
 		(key: string) => {
@@ -99,51 +64,24 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		buildText,
 		durationMs,
 		enabled,
-		inputPolicy,
 		mode,
 		resetKey,
 		scheduledStartTime,
-		startPolicy,
 	});
 
 	// Reset once when a usable typing configuration actually changes, never just because of mount.
 	useLayoutEffect(() => {
+		const config = { buildText, durationMs, enabled, mode, resetKey, scheduledStartTime };
 		const previous = previousConfigRef.current;
-		const changed =
-			previous.buildText !== buildText ||
-			previous.durationMs !== durationMs ||
-			previous.enabled !== enabled ||
-			previous.inputPolicy !== inputPolicy ||
-			previous.mode !== mode ||
-			previous.resetKey !== resetKey ||
-			previous.scheduledStartTime !== scheduledStartTime ||
-			previous.startPolicy !== startPolicy;
-
-		previousConfigRef.current = {
-			buildText,
-			durationMs,
-			enabled,
-			inputPolicy,
-			mode,
-			resetKey,
-			scheduledStartTime,
-			startPolicy,
-		};
+		previousConfigRef.current = config;
+		const changed = (Object.keys(config) as (keyof typeof config)[]).some(
+			(key) => config[key] !== previous[key],
+		);
 		if (enabled && changed) {
 			reset();
 			setAppliedResetKey(resetKey);
 		}
-	}, [
-		buildText,
-		durationMs,
-		enabled,
-		inputPolicy,
-		mode,
-		reset,
-		resetKey,
-		scheduledStartTime,
-		startPolicy,
-	]);
+	}, [buildText, durationMs, enabled, mode, reset, resetKey, scheduledStartTime]);
 
 	// Global keyboard handling for typing input and the restart shortcut.
 	useEffect(() => {
@@ -228,7 +166,6 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 	const accuracy = calculateAccuracy(state.totalInputs, state.correctInputs);
 
 	const typedWords = countTypedWords(state.text, currentIndex);
-	const correctWords = countCorrectWords(state.text, wordCorrectness);
 	const totalWords = state.text.length === 0 ? 0 : state.text.split(" ").length;
 	const elapsedTimeMs =
 		mode === "time" && state.startTime !== null
@@ -255,12 +192,9 @@ export function useTyping(words: string[], numWords: number, options?: UseTyping
 		correctCharacterCount,
 		typedWords,
 		totalWords,
-		correctWords,
-		numWords,
 		mode,
 		enabled,
 		timeLeftMs,
-		durationMs,
 		appliedResetKey,
 		reset,
 		typeCharacter,

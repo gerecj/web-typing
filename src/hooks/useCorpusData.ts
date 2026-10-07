@@ -25,7 +25,6 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 
 	useEffect(() => {
 		const controller = new AbortController();
-		let cancelled = false;
 
 		async function loadWords() {
 			try {
@@ -35,9 +34,9 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 				}
 				const words = parseCorpusWords(await response.json());
 				if (!words) throw new Error(`Invalid corpus payload for '${activeCorpus}'`);
-				if (!cancelled) setLoadedWords({ corpusId: activeCorpus, words });
+				if (!controller.signal.aborted) setLoadedWords({ corpusId: activeCorpus, words });
 			} catch (error) {
-				if (cancelled || controller.signal.aborted) return;
+				if (controller.signal.aborted) return;
 
 				setLoadedWords({ corpusId: activeCorpus, words: FALLBACK_WORDS });
 				if (import.meta.env.DEV) {
@@ -47,17 +46,13 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 		}
 
 		void loadWords();
-		return () => {
-			cancelled = true;
-			controller.abort();
-		};
+		return () => controller.abort();
 	}, [activeCorpus]);
 
 	useEffect(() => {
 		if (preset !== "quote" || loadedQuotes?.path === quotePath) return;
 
 		const controller = new AbortController();
-		let cancelled = false;
 		async function loadQuotes() {
 			try {
 				const response = await fetch(quotePath, { signal: controller.signal });
@@ -65,9 +60,9 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 					throw new Error(`Failed to fetch quotes (${response.status})`);
 				}
 				const quotes = parseQuotes(await response.json());
-				if (!cancelled) setLoadedQuotes({ path: quotePath, ...quotes });
+				if (!controller.signal.aborted) setLoadedQuotes({ path: quotePath, ...quotes });
 			} catch (error) {
-				if (cancelled || controller.signal.aborted) return;
+				if (controller.signal.aborted) return;
 
 				if (import.meta.env.DEV) {
 					console.warn(`[typing] Quote load failed for ${quotePath}.`, error);
@@ -77,10 +72,7 @@ export function useCorpusData(activeCorpus: CorpusId, preset: TypingPreset) {
 		}
 
 		void loadQuotes();
-		return () => {
-			cancelled = true;
-			controller.abort();
-		};
+		return () => controller.abort();
 	}, [loadedQuotes?.path, preset, quotePath]);
 
 	const wordsReady = loadedWords?.corpusId === activeCorpus;

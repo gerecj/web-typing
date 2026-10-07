@@ -1,20 +1,17 @@
 import { useEffect, useMemo, useRef } from "react";
 import { findErrorRanges } from "../../lib/race/error-ranges";
-import { type ClientMessage, PROTOCOL_VERSION } from "../../lib/race/protocol";
+import { type ClientMessage, PROTOCOL_VERSION, type ProgressReport } from "../../lib/race/protocol";
 import { isInteractiveTarget, useTyping } from "../useTyping";
 import { useRaceSocket } from "./useRaceSocket";
 
 const PROGRESS_INTERVAL_MS = 100;
-const EMPTY_WORDS: string[] = [];
 
 export function useRace(code: string, name: string | null) {
 	const connection = useRaceSocket(code, name);
 	const activeRace = connection.activeRace;
-	const typing = useTyping(EMPTY_WORDS, 0, {
+	const typing = useTyping({
 		text: activeRace?.text ?? "",
 		enabled: activeRace !== null,
-		inputPolicy: "free",
-		startPolicy: "scheduled",
 		scheduledStartTime: activeRace?.localStartsAt,
 		allowRestart: false,
 		resetKey: activeRace?.roundId,
@@ -33,7 +30,7 @@ export function useRace(code: string, name: string | null) {
 		if (typing.appliedResetKey !== roundId) return;
 		if (finishSentForRoundRef.current === roundId) return;
 
-		const progress = {
+		const progress: ProgressReport = {
 			roundId,
 			charIndex: typing.currentIndex,
 			totalInputs: typing.totalInputs,

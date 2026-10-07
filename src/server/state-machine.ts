@@ -1,5 +1,5 @@
 import type { ErrorRange } from "../lib/race/error-ranges";
-import type { RaceSettings } from "../lib/race/protocol";
+import type { ProgressReport, RaceSettings } from "../lib/race/protocol";
 import { calculateAccuracy, calculateWPMFromCorrectCharacters } from "../lib/typing-metrics";
 import {
 	MAX_FINISH_WPM,
@@ -20,28 +20,7 @@ export type RoomEvent =
 			round: RoomRound;
 			now: number;
 	  }
-	| {
-			type: "progress";
-			playerId: string;
-			roundId: string;
-			charIndex: number;
-			totalInputs: number;
-			correctInputs: number;
-			correctCharacters: number;
-			errorRanges: ErrorRange[];
-			now: number;
-	  }
-	| {
-			type: "finish";
-			playerId: string;
-			roundId: string;
-			charIndex: number;
-			totalInputs: number;
-			correctInputs: number;
-			correctCharacters: number;
-			errorRanges: ErrorRange[];
-			now: number;
-	  }
+	| ({ type: "progress" | "finish"; playerId: string; now: number } & ProgressReport)
 	| { type: "set_repeat"; playerId: string; ready: boolean; now: number }
 	| { type: "advance_time"; now: number };
 

@@ -12,67 +12,58 @@ import {
 	type WordsOption,
 } from "../lib/typing-settings";
 
-const CORPUS_STORAGE_KEY = "typing-corpus";
-const PRESET_STORAGE_KEY = "typing-preset";
-const PUNCTUATION_STORAGE_KEY = "typing-punctuation";
-const TIME_OPTION_STORAGE_KEY = "typing-time-option";
-const WORDS_OPTION_STORAGE_KEY = "typing-words-option";
-const QUOTE_OPTION_STORAGE_KEY = "typing-quote-option";
+function oneOf<T extends string | number>(options: readonly T[], value: unknown): T | null {
+	return options.includes(value as T) ? (value as T) : null;
+}
+
+/** State kept in localStorage, falling back when the stored value is missing or no longer valid. */
+function useStoredState<T extends string | number | boolean>(
+	key: string,
+	fallback: T,
+	parse: (stored: string) => T | null,
+) {
+	const [value, setValue] = useState<T>(() => {
+		if (typeof window === "undefined") return fallback;
+		const stored = window.localStorage.getItem(key);
+		return (stored === null ? null : parse(stored)) ?? fallback;
+	});
+
+	useEffect(() => {
+		window.localStorage.setItem(key, String(value));
+	}, [key, value]);
+
+	return [value, setValue] as const;
+}
 
 export function useTypingSettings() {
-	const [preset, setPreset] = useState<TypingPreset>(() => {
-		if (typeof window === "undefined") return "time";
-		const stored = window.localStorage.getItem(PRESET_STORAGE_KEY);
-		return PRESET_OPTIONS.includes(stored as TypingPreset) ? (stored as TypingPreset) : "time";
-	});
-	const [punctuationEnabled, setPunctuationEnabled] = useState(() => {
-		if (typeof window === "undefined") return false;
-		return window.localStorage.getItem(PUNCTUATION_STORAGE_KEY) === "true";
-	});
-	const [timeOption, setTimeOption] = useState<TimeOption>(() => {
-		if (typeof window === "undefined") return 15;
-		const stored = Number(window.localStorage.getItem(TIME_OPTION_STORAGE_KEY));
-		return TIME_OPTIONS.includes(stored as TimeOption) ? (stored as TimeOption) : 15;
-	});
-	const [wordsOption, setWordsOption] = useState<WordsOption>(() => {
-		if (typeof window === "undefined") return 30;
-		const stored = Number(window.localStorage.getItem(WORDS_OPTION_STORAGE_KEY));
-		return WORDS_OPTIONS.includes(stored as WordsOption) ? (stored as WordsOption) : 30;
-	});
-	const [quoteOption, setQuoteOption] = useState<QuoteOption>(() => {
-		if (typeof window === "undefined") return "medium";
-		const stored = window.localStorage.getItem(QUOTE_OPTION_STORAGE_KEY);
-		return QUOTE_OPTIONS.includes(stored as QuoteOption) ? (stored as QuoteOption) : "medium";
-	});
-	const [activeCorpus, setActiveCorpus] = useState(() => {
-		if (typeof window === "undefined") return DEFAULT_CORPUS;
-		const stored = window.localStorage.getItem(CORPUS_STORAGE_KEY);
-		return isCorpusId(stored) ? stored : DEFAULT_CORPUS;
-	});
-
-	useEffect(() => {
-		window.localStorage.setItem(CORPUS_STORAGE_KEY, activeCorpus);
-	}, [activeCorpus]);
-
-	useEffect(() => {
-		window.localStorage.setItem(PRESET_STORAGE_KEY, preset);
-	}, [preset]);
-
-	useEffect(() => {
-		window.localStorage.setItem(PUNCTUATION_STORAGE_KEY, String(punctuationEnabled));
-	}, [punctuationEnabled]);
-
-	useEffect(() => {
-		window.localStorage.setItem(TIME_OPTION_STORAGE_KEY, String(timeOption));
-	}, [timeOption]);
-
-	useEffect(() => {
-		window.localStorage.setItem(WORDS_OPTION_STORAGE_KEY, String(wordsOption));
-	}, [wordsOption]);
-
-	useEffect(() => {
-		window.localStorage.setItem(QUOTE_OPTION_STORAGE_KEY, quoteOption);
-	}, [quoteOption]);
+	const [activeCorpus, setActiveCorpus] = useStoredState(
+		"typing-corpus",
+		DEFAULT_CORPUS,
+		(stored) => (isCorpusId(stored) ? stored : null),
+	);
+	const [preset, setPreset] = useStoredState<TypingPreset>("typing-preset", "time", (stored) =>
+		oneOf(PRESET_OPTIONS, stored),
+	);
+	const [punctuationEnabled, setPunctuationEnabled] = useStoredState(
+		"typing-punctuation",
+		false,
+		(stored) => stored === "true",
+	);
+	const [timeOption, setTimeOption] = useStoredState<TimeOption>(
+		"typing-time-option",
+		15,
+		(stored) => oneOf(TIME_OPTIONS, Number(stored)),
+	);
+	const [wordsOption, setWordsOption] = useStoredState<WordsOption>(
+		"typing-words-option",
+		30,
+		(stored) => oneOf(WORDS_OPTIONS, Number(stored)),
+	);
+	const [quoteOption, setQuoteOption] = useStoredState<QuoteOption>(
+		"typing-quote-option",
+		"medium",
+		(stored) => oneOf(QUOTE_OPTIONS, stored),
+	);
 
 	return {
 		activeCorpus,

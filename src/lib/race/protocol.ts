@@ -10,7 +10,7 @@ import { type ErrorRange, parseErrorRanges } from "./error-ranges";
 
 export const PROTOCOL_VERSION = 3;
 export const MAX_PLAYER_NAME_LENGTH = 24;
-export const MAX_ROUND_ID_LENGTH = 64;
+const MAX_ROUND_ID_LENGTH = 64;
 
 export type RoomPhase = "waiting" | "countdown" | "racing" | "results";
 
@@ -50,28 +50,21 @@ interface VersionedMessage {
 	v: typeof PROTOCOL_VERSION;
 }
 
+/** What a racer reports about their typing, both while racing and when they finish. */
+export interface ProgressReport {
+	roundId: string;
+	charIndex: number;
+	totalInputs: number;
+	correctInputs: number;
+	correctCharacters: number;
+	errorRanges: ErrorRange[];
+}
+
 export type ClientMessage =
 	| (VersionedMessage & { type: "join"; name: string })
 	| (VersionedMessage & { type: "set_ready"; ready: boolean })
 	| (VersionedMessage & { type: "set_settings"; settings: RaceSettings })
-	| (VersionedMessage & {
-			type: "progress";
-			roundId: string;
-			charIndex: number;
-			totalInputs: number;
-			correctInputs: number;
-			correctCharacters: number;
-			errorRanges: ErrorRange[];
-	  })
-	| (VersionedMessage & {
-			type: "finish";
-			roundId: string;
-			charIndex: number;
-			totalInputs: number;
-			correctInputs: number;
-			correctCharacters: number;
-			errorRanges: ErrorRange[];
-	  })
+	| (VersionedMessage & ProgressReport & { type: "progress" | "finish" })
 	| (VersionedMessage & { type: "set_repeat"; ready: boolean })
 	| (VersionedMessage & { type: "ping"; clientSentAt: number });
 

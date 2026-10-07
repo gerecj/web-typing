@@ -52,6 +52,26 @@ export const DEFAULT_RACE_SETTINGS: RaceSettings = {
 	quoteLength: "medium",
 };
 
+export function createRoomPlayer(id: string, name: string): RoomPlayer {
+	return {
+		id,
+		name,
+		connected: true,
+		ready: false,
+		repeatReady: false,
+		charIndex: 0,
+		totalInputs: 0,
+		correctInputs: 0,
+		correctCharacters: 0,
+		errorRanges: [],
+		place: null,
+		wpm: null,
+		accuracy: null,
+		finishedAt: null,
+		didNotFinish: false,
+	};
+}
+
 export function createRoomState(code: string, now: number, expiresAt: number): RoomState {
 	return {
 		code,

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { ModeSwitcher } from "../../components/ModeSwitcher";
 import { ThemePicker } from "../../components/ThemePicker";
-import { normalizeLobbyCode } from "../../lib/race/lobby-code";
+import { LOBBY_CODE_LENGTH, normalizeLobbyCode } from "../../lib/race/lobby-code";
 import { MAX_PLAYER_NAME_LENGTH } from "../../lib/race/protocol";
 import { RACE_PLAYER_NAME_STORAGE_KEY } from "../../lib/race/session";
 
@@ -106,7 +106,7 @@ function RaceEntryPage() {
 				<form onSubmit={joinRace} className="flex gap-2">
 					<input
 						value={code}
-						maxLength={8}
+						maxLength={LOBBY_CODE_LENGTH}
 						onChange={(event) => setCode(event.currentTarget.value.toUpperCase())}
 						placeholder="LOBBY CODE"
 						aria-label="Lobby code"
