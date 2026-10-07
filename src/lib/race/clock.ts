@@ -9,7 +9,7 @@ export interface ClockEstimate {
 	roundTripMs: number;
 }
 
-export function estimateClockOffset(sample: ClockSample): ClockEstimate {
+function estimateClockOffset(sample: ClockSample): ClockEstimate {
 	const roundTripMs = Math.max(0, sample.clientReceivedAt - sample.clientSentAt);
 	const clientMidpoint = sample.clientSentAt + roundTripMs / 2;
 	return {

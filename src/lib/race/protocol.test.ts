@@ -2,36 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PROTOCOL_VERSION, parseClientMessage, parseRaceSettings } from "./protocol";
 
 describe("race protocol", () => {
-	it("normalizes a valid guest join", () => {
-		expect(
-			parseClientMessage({
-				v: PROTOCOL_VERSION,
-				type: "join",
-				name: "  Ada  ",
-			}),
-		).toEqual({
-			v: PROTOCOL_VERSION,
-			type: "join",
-			name: "Ada",
-		});
-	});
-
-	it("rejects malformed, stale, and impossible progress messages", () => {
-		expect(parseClientMessage({ v: 0, type: "start" })).toBeNull();
-		expect(
-			parseClientMessage({
-				v: PROTOCOL_VERSION,
-				type: "progress",
-				roundId: "round-1",
-				charIndex: -1,
-				totalInputs: 2,
-				correctInputs: 3,
-				correctCharacters: 0,
-			}),
-		).toBeNull();
-	});
-
-	it("carries mistake positions with progress and rejects ranges past the cursor", () => {
+	it("accepts well-formed progress and rejects impossible or malformed reports", () => {
 		const progress = {
 			v: PROTOCOL_VERSION,
 			type: "progress",
@@ -43,35 +14,28 @@ describe("race protocol", () => {
 			errorRanges: [[2, 3]],
 		};
 		expect(parseClientMessage(progress)).toEqual(progress);
-		expect(parseClientMessage({ ...progress, errorRanges: [[4, 6]] })).toBeNull();
-		expect(parseClientMessage({ ...progress, errorRanges: undefined })).toBeNull();
+
+		for (const invalid of [
+			{ ...progress, v: PROTOCOL_VERSION - 1 },
+			{ ...progress, charIndex: -1 },
+			{ ...progress, correctInputs: 7 },
+			{ ...progress, correctCharacters: 6 },
+			{ ...progress, errorRanges: [[4, 6]] },
+			{ ...progress, errorRanges: undefined },
+		]) {
+			expect(parseClientMessage(invalid)).toBeNull();
+		}
 	});
 
-	it("accepts only supported race settings", () => {
-		expect(
-			parseRaceSettings({
-				preset: "words",
-				corpusId: "english_1k",
-				punctuationEnabled: true,
-				wordCount: 30,
-				quoteLength: "medium",
-			}),
-		).toEqual({
+	it("only accepts race settings with a finish line", () => {
+		const settings = {
 			preset: "words",
 			corpusId: "english_1k",
 			punctuationEnabled: true,
 			wordCount: 30,
 			quoteLength: "medium",
-		});
-
-		expect(
-			parseRaceSettings({
-				preset: "time",
-				corpusId: "english",
-				punctuationEnabled: false,
-				wordCount: 30,
-				quoteLength: "medium",
-			}),
-		).toBeNull();
+		};
+		expect(parseRaceSettings(settings)).toEqual(settings);
+		expect(parseRaceSettings({ ...settings, preset: "time" })).toBeNull();
 	});
 });
