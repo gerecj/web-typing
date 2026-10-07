@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { controlStyles, segmentedItemClass } from "../../lib/controlStyles";
 import type { RaceSettings, RoomSnapshot } from "../../lib/race/protocol";
 import {
@@ -25,6 +26,14 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 		onSettings({ ...room.settings, ...patch });
 	}
 
+	// Drop focus after a click, so Tab goes back to toggling ready.
+	function thenBlur(action: () => void) {
+		return (event: MouseEvent<HTMLButtonElement>) => {
+			action();
+			event.currentTarget.blur();
+		};
+	}
+
 	return (
 		<section className="w-fit max-w-[calc(100vw-2rem)] space-y-6 rounded-xl border border-(--text-muted)/20 bg-(--bg) p-6 shadow-2xl">
 			<header className="text-center">
@@ -43,7 +52,7 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 								key={preset}
 								type="button"
 								disabled={!isHost}
-								onClick={() => updateSettings({ preset })}
+								onClick={thenBlur(() => updateSettings({ preset }))}
 								className={segmentedItemClass(room.settings.preset === preset)}
 							>
 								{preset}
@@ -78,11 +87,11 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 									key={option}
 									type="button"
 									disabled={!isHost}
-									onClick={() =>
+									onClick={thenBlur(() =>
 										room.settings.preset === "words"
 											? updateSettings({ wordCount: option as WordsOption })
-											: updateSettings({ quoteLength: option as QuoteOption })
-									}
+											: updateSettings({ quoteLength: option as QuoteOption }),
+									)}
 									className={segmentedItemClass(selected)}
 								>
 									{option}
@@ -94,11 +103,11 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 						<button
 							type="button"
 							disabled={!isHost}
-							onClick={() =>
+							onClick={thenBlur(() =>
 								updateSettings({
 									punctuationEnabled: !room.settings.punctuationEnabled,
-								})
-							}
+								}),
+							)}
 							className={segmentedItemClass(room.settings.punctuationEnabled)}
 						>
 							punctuation
@@ -114,7 +123,7 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 			<div className="flex justify-center">
 				<button
 					type="button"
-					onClick={() => onReady(!currentPlayer?.ready)}
+					onClick={thenBlur(() => onReady(!currentPlayer?.ready))}
 					className={`min-w-28 rounded-md border border-(--accent) px-5 py-2 transition ${
 						currentPlayer?.ready
 							? "bg-(--accent) text-(--bg)"

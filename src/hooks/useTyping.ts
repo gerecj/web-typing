@@ -29,7 +29,7 @@ export interface UseTypingOptions {
 	resetKey?: string | number;
 }
 
-function isInteractiveTarget(target: EventTarget | null): boolean {
+export function isInteractiveTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) return false;
 	return (
 		target.closest(

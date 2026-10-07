@@ -59,7 +59,11 @@ export function RaceResults({ room, currentPlayerId, onRepeat }: RaceResultsProp
 			<div className="text-center">
 				<button
 					type="button"
-					onClick={() => onRepeat(!currentPlayer?.repeatReady)}
+					onClick={(event) => {
+						onRepeat(!currentPlayer?.repeatReady);
+						// Drop focus so Tab goes back to toggling race again.
+						event.currentTarget.blur();
+					}}
 					className={`rounded-md border border-(--accent) px-5 py-2 transition ${
 						currentPlayer?.repeatReady
 							? "bg-(--accent) text-(--bg)"

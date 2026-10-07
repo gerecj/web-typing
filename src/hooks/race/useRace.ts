@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { findErrorRanges } from "../../lib/race/error-ranges";
 import { type ClientMessage, PROTOCOL_VERSION } from "../../lib/race/protocol";
-import { useTyping } from "../useTyping";
+import { isInteractiveTarget, useTyping } from "../useTyping";
 import { useRaceSocket } from "./useRaceSocket";
 
 const PROGRESS_INTERVAL_MS = 100;
@@ -105,6 +105,33 @@ export function useRace(code: string, name: string | null) {
 		finishSentForRoundRef.current = null;
 		lastProgressSentAtRef.current = 0;
 	}, [activeRace?.roundId]);
+
+	// Tab toggles ready in the lobby and race again on the results, like restart does in solo.
+	const phase = connection.room?.phase;
+	const currentPlayer = connection.room?.players.find(
+		(player) => player.id === connection.playerId,
+	);
+	const isReady = currentPlayer?.ready;
+	const isRepeatReady = currentPlayer?.repeatReady;
+	const { sendReady, sendRepeat } = connection;
+	useEffect(() => {
+		if (isReady === undefined || isRepeatReady === undefined) return;
+		if (phase !== "waiting" && phase !== "results") return;
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key !== "Tab" || event.repeat || event.ctrlKey || event.altKey || event.metaKey) {
+				return;
+			}
+			// Leave Tab for focus navigation while a control is focused.
+			if (isInteractiveTarget(event.target)) return;
+			event.preventDefault();
+			if (phase === "waiting") sendReady(!isReady);
+			else sendRepeat(!isRepeatReady);
+		}
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isReady, isRepeatReady, phase, sendReady, sendRepeat]);
 
 	return { ...connection, typing, errorRanges };
 }
