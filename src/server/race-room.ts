@@ -30,7 +30,6 @@ const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1_000;
 const COUNTDOWN_MS = 3_000;
 const RACE_DEADLINE_MS = 3 * 60 * 1_000;
 const MAX_MESSAGE_BYTES = 4_096;
-const PROGRESS_PERSIST_INTERVAL_MS = 1_000;
 const BOT_TICK_MS = 200;
 
 interface SocketAttachment {
@@ -65,7 +64,6 @@ function errorMessage(code: RoomErrorCode): string {
 export class RaceRoom extends DurableObject<Env> {
 	private room: RoomState | null = null;
 	private scheduledAlarm: number | null = null;
-	private lastProgressPersistAt = 0;
 	private roundStarting = false;
 	private botTicker: ReturnType<typeof setInterval> | null = null;
 	/** Keystroke plans for this round's bots, rebuilt from their seeds after a restart. */
@@ -239,11 +237,10 @@ export class RaceRoom extends DurableObject<Env> {
 			this.sendError(socket, result.error, errorMessage(result.error));
 			return;
 		}
-		const shouldPersist =
-			message.type !== "progress" ||
-			now - this.lastProgressPersistAt >= PROGRESS_PERSIST_INTERVAL_MS;
+		// Progress isn't saved: every message carries the player's full totals, so after a restart
+		// the next one restores it. Only save one that moves the race from countdown to racing.
+		const shouldPersist = message.type !== "progress" || result.state.phase !== this.room.phase;
 		await this.applyTransition(result, now, shouldPersist, true);
-		if (shouldPersist && message.type === "progress") this.lastProgressPersistAt = now;
 	}
 
 	private async beginRound() {
