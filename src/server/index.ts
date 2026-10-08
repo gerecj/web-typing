@@ -1,4 +1,5 @@
 import { createLobbyCode, normalizeLobbyCode } from "../lib/race/lobby-code";
+import type { RoomKind } from "../lib/race/protocol";
 import { RaceRoom } from "./race-room";
 
 const MAX_CREATE_ATTEMPTS = 5;
@@ -7,10 +8,12 @@ function roomStub(env: Env, code: string): DurableObjectStub<RaceRoom> {
 	return env.RACE_ROOMS.get(env.RACE_ROOMS.idFromName(code));
 }
 
-async function createLobby(env: Env): Promise<Response> {
+async function createLobby(request: Request, env: Env): Promise<Response> {
+	const body = (await request.json().catch(() => null)) as { kind?: unknown } | null;
+	const kind: RoomKind = body?.kind === "bots" ? "bots" : "friends";
 	for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {
 		const code = createLobbyCode();
-		const created = await roomStub(env, code).initialize(code);
+		const created = await roomStub(env, code).initialize(code, kind);
 		if (created) return Response.json({ code }, { status: 201 });
 	}
 	return new Response("Unable to allocate a unique lobby code", { status: 503 });
@@ -20,7 +23,7 @@ async function routeApi(request: Request, env: Env): Promise<Response | null> {
 	const url = new URL(request.url);
 
 	if (request.method === "POST" && url.pathname === "/api/lobbies") {
-		return createLobby(env);
+		return createLobby(request, env);
 	}
 
 	const match = url.pathname.match(/^\/api\/lobbies\/([^/]+)\/websocket$/);

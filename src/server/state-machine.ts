@@ -1,6 +1,7 @@
 import type { ErrorRange } from "../lib/race/error-ranges";
 import type { ProgressReport, RaceSettings } from "../lib/race/protocol";
 import { calculateAccuracy, calculateWPMFromCorrectCharacters } from "../lib/typing-metrics";
+import type { BotProfile } from "./bots";
 import {
 	MAX_FINISH_WPM,
 	MAX_RACE_PLAYERS,
@@ -8,16 +9,19 @@ import {
 	type RoomPlayer,
 	type RoomRound,
 	type RoomState,
+	syncBots,
 } from "./room-state";
 
 export type RoomEvent =
-	| { type: "join"; player: RoomPlayer; now: number }
+	| { type: "join"; player: RoomPlayer; skillWpm?: number; now: number }
 	| { type: "disconnect"; playerId: string; now: number }
 	| { type: "set_ready"; playerId: string; ready: boolean; now: number }
 	| { type: "set_settings"; playerId: string; settings: RaceSettings; now: number }
 	| {
 			type: "start_round";
 			round: RoomRound;
+			/** How each bot types this round, by player id. */
+			botProfiles?: Record<string, BotProfile>;
 			now: number;
 	  }
 	| ({ type: "progress" | "finish"; playerId: string; now: number } & ProgressReport)
@@ -72,24 +76,38 @@ function connectedPlayers(state: RoomState): RoomPlayer[] {
 	return Object.values(state.players).filter((player) => player.connected);
 }
 
+function connectedHumans(state: RoomState): RoomPlayer[] {
+	return connectedPlayers(state).filter((player) => !player.isBot);
+}
+
+// Bots are always ready, so these also make sure a race never starts without a person in it.
 function allConnectedRepeatReady(state: RoomState): boolean {
-	const players = connectedPlayers(state);
-	return players.length >= MIN_RACE_PLAYERS && players.every((player) => player.repeatReady);
+	return (
+		connectedHumans(state).length >= MIN_RACE_PLAYERS &&
+		connectedPlayers(state).every((player) => player.repeatReady)
+	);
 }
 
 function allConnectedReady(state: RoomState): boolean {
-	const players = connectedPlayers(state);
-	return players.length >= MIN_RACE_PLAYERS && players.every((player) => player.ready);
+	return (
+		connectedHumans(state).length >= MIN_RACE_PLAYERS &&
+		connectedPlayers(state).every((player) => player.ready)
+	);
 }
 
 function assignNewHost(state: RoomState) {
 	if (state.hostPlayerId && state.players[state.hostPlayerId]?.connected) return;
-	state.hostPlayerId = connectedPlayers(state)[0]?.id ?? null;
+	state.hostPlayerId = connectedHumans(state)[0]?.id ?? null;
+}
+
+// Keeps bots within reach of the player as their speed changes.
+function clampSkill(wpm: number): number {
+	return Math.min(250, Math.max(10, Math.round(wpm)));
 }
 
 function resetRoundPlayer(player: RoomPlayer) {
-	player.ready = false;
-	player.repeatReady = false;
+	player.ready = player.isBot;
+	player.repeatReady = player.isBot;
 	player.charIndex = 0;
 	player.totalInputs = 0;
 	player.correctInputs = 0;
@@ -117,13 +135,7 @@ function returnToWaiting(state: RoomState) {
 }
 
 function reconcileRematch(state: RoomState, effects: RoomEffect[]) {
-	const players = connectedPlayers(state);
-	if (players.length === 0 || !players.every((player) => player.repeatReady)) return;
-	if (players.length >= MIN_RACE_PLAYERS) {
-		effects.push({ type: "round_requested" });
-	} else {
-		returnToWaiting(state);
-	}
+	if (allConnectedRepeatReady(state)) effects.push({ type: "round_requested" });
 }
 
 // Everyone types the same passage, so WPM over correct characters decides the race. Accuracy and
@@ -149,8 +161,12 @@ function finishRoundIfComplete(state: RoomState, effects: RoomEffect[]) {
 	assignPlaces(players);
 	state.phase = "results";
 	for (const player of players) {
-		player.ready = false;
-		player.repeatReady = false;
+		player.ready = player.isBot;
+		player.repeatReady = player.isBot;
+		if (state.kind === "bots" && !player.isBot && player.wpm !== null && player.place !== null) {
+			// Move toward the latest result, so bots keep pace as the player improves.
+			state.skillWpm = clampSkill(state.skillWpm * 0.7 + player.wpm * 0.3);
+		}
 	}
 	effects.push({ type: "round_finished", roundId: state.round.id });
 }
@@ -172,11 +188,17 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 				return reject(current, "invalid_phase");
 			}
 			if (state.players[event.player.id]) return reject(current, "already_joined");
-			if (Object.keys(state.players).length >= MAX_RACE_PLAYERS) {
-				return reject(current, "lobby_full");
-			}
+			const full =
+				state.kind === "bots"
+					? connectedHumans(state).length > 0
+					: Object.keys(state.players).length >= MAX_RACE_PLAYERS;
+			if (full) return reject(current, "lobby_full");
 			state.players[event.player.id] = event.player;
 			state.hostPlayerId ??= event.player.id;
+			if (state.kind === "bots") {
+				if (event.skillWpm !== undefined) state.skillWpm = clampSkill(event.skillWpm);
+				syncBots(state);
+			}
 			effects.push({ type: "snapshot_changed" });
 			break;
 		}
@@ -193,7 +215,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			} else {
 				delete state.players[player.id];
 				assignNewHost(state);
-				if (state.phase === "countdown" && connectedPlayers(state).length < MIN_RACE_PLAYERS) {
+				if (state.phase === "countdown" && connectedHumans(state).length < MIN_RACE_PLAYERS) {
 					returnToWaiting(state);
 				} else if (state.phase === "waiting" && allConnectedReady(state)) {
 					effects.push({ type: "round_requested" });
@@ -222,6 +244,7 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			}
 			if (state.hostPlayerId !== event.playerId) return reject(current, "not_host");
 			state.settings = event.settings;
+			syncBots(state);
 			if (state.phase === "results") {
 				returnToWaiting(state);
 			}
@@ -243,7 +266,10 @@ export function transitionRoom(current: RoomState, event: RoomEvent): Transition
 			}
 
 			removeDisconnectedPlayers(state);
-			for (const player of Object.values(state.players)) resetRoundPlayer(player);
+			for (const player of Object.values(state.players)) {
+				resetRoundPlayer(player);
+				if (player.isBot) player.botProfile = event.botProfiles?.[player.id] ?? player.botProfile;
+			}
 			state.round = event.round;
 			state.phase = "countdown";
 			effects.push({ type: "snapshot_changed" }, { type: "race_started", round: event.round });

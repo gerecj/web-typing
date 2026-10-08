@@ -2,11 +2,13 @@ export const TIME_OPTIONS = [15, 30, 60] as const;
 export const WORDS_OPTIONS = [15, 30, 60] as const;
 export const QUOTE_OPTIONS = ["short", "medium", "long"] as const;
 export const PRESET_OPTIONS = ["time", "words", "quote"] as const;
+export const BOT_COUNT_OPTIONS = [1, 2, 3, 4, 5] as const;
 
 export type TypingPreset = (typeof PRESET_OPTIONS)[number];
 export type TimeOption = (typeof TIME_OPTIONS)[number];
 export type WordsOption = (typeof WORDS_OPTIONS)[number];
 export type QuoteOption = (typeof QUOTE_OPTIONS)[number];
+export type BotCountOption = (typeof BOT_COUNT_OPTIONS)[number];
 
 export const CORPORA = [
 	{ id: "english", label: "English", path: "/corpora/english.json" },
@@ -39,6 +41,10 @@ export function isCorpusId(value: unknown): value is CorpusId {
 
 export function isWordsOption(value: unknown): value is WordsOption {
 	return typeof value === "number" && WORDS_OPTIONS.includes(value as WordsOption);
+}
+
+export function isBotCountOption(value: unknown): value is BotCountOption {
+	return typeof value === "number" && BOT_COUNT_OPTIONS.includes(value as BotCountOption);
 }
 
 export function isQuoteOption(value: unknown): value is QuoteOption {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProgressReport } from "../lib/race/protocol";
+import { botProgressAt, planBotKeystrokes } from "./bots";
 import { createRoomPlayer, createRoomState, type RoomState } from "./room-state";
 import { type RoomEvent, type TransitionResult, transitionRoom } from "./state-machine";
 
@@ -164,5 +165,55 @@ describe("race room state machine", () => {
 		const allButOne = transitionRoom(twoReady, repeat("two"));
 		expect(requestsRound(allButOne)).toBe(false);
 		expect(requestsRound(transitionRoom(allButOne.state, leave("three", 5_100)))).toBe(true);
+	});
+
+	describe("bots rooms", () => {
+		const botsLobby = (botCount: 1 | 3 = 3) => {
+			const room = apply(createRoomState("ABCD2345", 0, 60_000, "bots"), join("you"));
+			return apply(room, {
+				type: "set_settings",
+				playerId: "you",
+				settings: { ...room.settings, botCount },
+				now: 0,
+			});
+		};
+
+		it("keeps one person with always-ready bots, and never races bots alone", () => {
+			const room = botsLobby();
+			expect(Object.values(room.players).filter((player) => player.isBot)).toHaveLength(3);
+			expect(transitionRoom(room, join("friend")).error).toBe("lobby_full");
+
+			const oneBot = botsLobby(1);
+			expect(Object.keys(oneBot.players)).toEqual(["you", "bot-1"]);
+			expect(requestsRound(transitionRoom(oneBot, ready("you")))).toBe(true);
+			expect(requestsRound(transitionRoom(oneBot, leave("you", 10)))).toBe(false);
+		});
+
+		it("accepts a bot's simulated typing and finishes it at its target wpm", () => {
+			const text = "the quick brown fox jumps over the lazy dog";
+			const profile = { wpm: 60, accuracy: 0.9, seed: 7 };
+			let room = apply(botsLobby(1), ready("you"), {
+				type: "start_round",
+				round: { id: "round-1", text, startsAt: 1_000, deadlineAt: 60_000 },
+				botProfiles: { "bot-1": profile },
+				now: 100,
+			});
+
+			const keystrokes = planBotKeystrokes(text, profile);
+			for (let elapsed = 200; elapsed < 60_000; elapsed += 200) {
+				const { finished, ...report } = botProgressAt(text, keystrokes, elapsed);
+				const finishedAt = keystrokes.at(-1)?.time ?? elapsed;
+				room = apply(room, {
+					type: finished ? "finish" : "progress",
+					playerId: "bot-1",
+					roundId: "round-1",
+					now: 1_000 + (finished ? finishedAt : elapsed),
+					...report,
+				});
+				if (finished) break;
+			}
+			expect(room.players["bot-1"].finishedAt).not.toBeNull();
+			expect(room.players["bot-1"].wpm).toBe(60);
+		});
 	});
 });

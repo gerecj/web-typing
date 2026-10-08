@@ -4,8 +4,10 @@ import {
 	encodeServerMessage,
 	PROTOCOL_VERSION,
 	parseClientMessage,
+	type RoomKind,
 	type ServerMessage,
 } from "../lib/race/protocol";
+import { type BotKeystroke, botProgressAt, createBotProfiles, planBotKeystrokes } from "./bots";
 import { getNextRoomDeadline } from "./deadlines";
 import { generateRacePassage } from "./passage-service";
 import {
@@ -29,6 +31,7 @@ const COUNTDOWN_MS = 3_000;
 const RACE_DEADLINE_MS = 3 * 60 * 1_000;
 const MAX_MESSAGE_BYTES = 4_096;
 const PROGRESS_PERSIST_INTERVAL_MS = 1_000;
+const BOT_TICK_MS = 200;
 
 interface SocketAttachment {
 	playerId: string | null;
@@ -45,7 +48,7 @@ function errorMessage(code: RoomErrorCode): string {
 		case "not_found":
 			return "You are no longer part of this race.";
 		case "lobby_full":
-			return "This lobby already has six players.";
+			return "This lobby is full.";
 		case "not_host":
 			return "Only the lobby host can do that.";
 		case "not_ready":
@@ -64,6 +67,9 @@ export class RaceRoom extends DurableObject<Env> {
 	private scheduledAlarm: number | null = null;
 	private lastProgressPersistAt = 0;
 	private roundStarting = false;
+	private botTicker: ReturnType<typeof setInterval> | null = null;
+	/** Keystroke plans for this round's bots, rebuilt from their seeds after a restart. */
+	private botPlans = new Map<string, BotKeystroke[]>();
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -74,10 +80,10 @@ export class RaceRoom extends DurableObject<Env> {
 	}
 
 	/** Returns false when a lobby with this code already exists. */
-	async initialize(code: string): Promise<boolean> {
+	async initialize(code: string, kind: RoomKind = "friends"): Promise<boolean> {
 		if (this.room) return false;
 		const now = Date.now();
-		this.room = createRoomState(code, now, now + ROOM_LIFETIME_MS);
+		this.room = createRoomState(code, now, now + ROOM_LIFETIME_MS, kind);
 		await this.persistAndSchedule(now);
 		return true;
 	}
@@ -161,7 +167,12 @@ export class RaceRoom extends DurableObject<Env> {
 		const now = Date.now();
 		const playerId = crypto.randomUUID();
 		const player = createRoomPlayer(playerId, message.name);
-		const transition = transitionRoom(this.room, { type: "join", player, now });
+		const transition = transitionRoom(this.room, {
+			type: "join",
+			player,
+			skillWpm: message.skillWpm,
+			now,
+		});
 
 		if (transition.error) {
 			const message =
@@ -259,9 +270,12 @@ export class RaceRoom extends DurableObject<Env> {
 			startsAt: now + COUNTDOWN_MS,
 			deadlineAt: now + COUNTDOWN_MS + RACE_DEADLINE_MS,
 		};
+		const bots = Object.values(this.room.players).filter((player) => player.isBot);
+		const profiles = createBotProfiles(bots.length, this.room.skillWpm);
 		const result = transitionRoom(this.room, {
 			type: "start_round",
 			round,
+			botProfiles: Object.fromEntries(bots.map((bot, index) => [bot.id, profiles[index]])),
 			now,
 		});
 		if (result.error) {
@@ -308,6 +322,61 @@ export class RaceRoom extends DurableObject<Env> {
 			this.emitEffect(effect);
 		}
 		if (requestRound) await this.beginRound();
+		this.syncBotTicker();
+	}
+
+	// Bots type on a timer while a race with bots is on.
+	private syncBotTicker() {
+		const room = this.room;
+		const active =
+			room !== null &&
+			(room.phase === "countdown" || room.phase === "racing") &&
+			Object.values(room.players).some((player) => player.isBot);
+		if (active && this.botTicker === null) {
+			this.botTicker = setInterval(() => void this.tickBots(), BOT_TICK_MS);
+		} else if (!active && this.botTicker !== null) {
+			clearInterval(this.botTicker);
+			this.botTicker = null;
+			this.botPlans.clear();
+		}
+	}
+
+	/** Reports each bot's typing the same way a player's client does. */
+	private async tickBots() {
+		const now = Date.now();
+		for (const bot of Object.values(this.room?.players ?? {})) {
+			const round = this.room?.round;
+			if (!this.room || !round || !bot.botProfile || bot.finishedAt !== null || bot.didNotFinish) {
+				continue;
+			}
+			const elapsed = now - round.startsAt;
+			if (elapsed <= 0) continue;
+
+			const planKey = `${round.id}:${bot.id}`;
+			let plan = this.botPlans.get(planKey);
+			if (!plan) {
+				plan = planBotKeystrokes(round.text, bot.botProfile);
+				this.botPlans.set(planKey, plan);
+			}
+			const { finished, ...report } = botProgressAt(round.text, plan, elapsed);
+			if (
+				!finished &&
+				report.totalInputs === bot.totalInputs &&
+				report.charIndex === bot.charIndex
+			) {
+				continue;
+			}
+			// Time a finish at the bot's last keystroke rather than this tick, so its WPM hits the target.
+			const eventNow = finished ? round.startsAt + (plan.at(-1)?.time ?? elapsed) : now;
+			const result = transitionRoom(this.room, {
+				type: finished ? "finish" : "progress",
+				playerId: bot.id,
+				roundId: round.id,
+				now: eventNow,
+				...report,
+			});
+			if (!result.error) await this.applyTransition(result, now, finished, false);
+		}
 	}
 
 	private emitEffect(effect: RoomEffect) {
@@ -406,6 +475,8 @@ export class RaceRoom extends DurableObject<Env> {
 	}
 
 	private async expireRoom() {
+		if (this.botTicker !== null) clearInterval(this.botTicker);
+		this.botTicker = null;
 		for (const socket of this.ctx.getWebSockets()) socket.close(1000, "Lobby expired");
 		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();

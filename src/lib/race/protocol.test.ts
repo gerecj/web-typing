@@ -34,6 +34,7 @@ describe("race protocol", () => {
 			punctuationEnabled: true,
 			wordCount: 30,
 			quoteLength: "medium",
+			botCount: 3,
 		};
 		expect(parseRaceSettings(settings)).toEqual(settings);
 		expect(parseRaceSettings({ ...settings, preset: "time" })).toBeNull();

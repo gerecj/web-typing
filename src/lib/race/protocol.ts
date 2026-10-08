@@ -1,5 +1,7 @@
 import {
+	type BotCountOption,
 	type CorpusId,
+	isBotCountOption,
 	isCorpusId,
 	isQuoteOption,
 	isWordsOption,
@@ -8,11 +10,13 @@ import {
 } from "../typing-settings";
 import { type ErrorRange, parseErrorRanges } from "./error-ranges";
 
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 export const MAX_PLAYER_NAME_LENGTH = 24;
 const MAX_ROUND_ID_LENGTH = 64;
 
 export type RoomPhase = "waiting" | "countdown" | "racing" | "results";
+/** Friends join a lobby by its code; a bots room is one player against bots. */
+export type RoomKind = "friends" | "bots";
 
 export interface RaceSettings {
 	preset: "words" | "quote";
@@ -20,6 +24,8 @@ export interface RaceSettings {
 	punctuationEnabled: boolean;
 	wordCount: WordsOption;
 	quoteLength: QuoteOption;
+	/** Only used by bots rooms. */
+	botCount: BotCountOption;
 }
 
 export interface PlayerSnapshot {
@@ -37,6 +43,7 @@ export interface PlayerSnapshot {
 
 export interface RoomSnapshot {
 	code: string;
+	kind: RoomKind;
 	phase: RoomPhase;
 	hostPlayerId: string | null;
 	settings: RaceSettings;
@@ -61,7 +68,8 @@ export interface ProgressReport {
 }
 
 export type ClientMessage =
-	| (VersionedMessage & { type: "join"; name: string })
+	/** skillWpm is the player's recent average, which bots rooms match their bots to. */
+	| (VersionedMessage & { type: "join"; name: string; skillWpm?: number })
 	| (VersionedMessage & { type: "set_ready"; ready: boolean })
 	| (VersionedMessage & { type: "set_settings"; settings: RaceSettings })
 	| (VersionedMessage & ProgressReport & { type: "progress" | "finish" })
@@ -133,6 +141,7 @@ export function parseRaceSettings(value: unknown): RaceSettings | null {
 	if (typeof value.punctuationEnabled !== "boolean") return null;
 	if (!isWordsOption(value.wordCount)) return null;
 	if (!isQuoteOption(value.quoteLength)) return null;
+	if (!isBotCountOption(value.botCount)) return null;
 
 	return {
 		preset: value.preset,
@@ -140,6 +149,7 @@ export function parseRaceSettings(value: unknown): RaceSettings | null {
 		punctuationEnabled: value.punctuationEnabled,
 		wordCount: value.wordCount,
 		quoteLength: value.quoteLength,
+		botCount: value.botCount,
 	};
 }
 
@@ -153,11 +163,10 @@ export function parseClientMessage(value: unknown): ClientMessage | null {
 			if (!isBoundedString(value.name, MAX_PLAYER_NAME_LENGTH)) return null;
 			const name = value.name.trim();
 			if (name.length === 0) return null;
-			return {
-				v: PROTOCOL_VERSION,
-				type: "join",
-				name,
-			};
+			const { skillWpm } = value;
+			if (skillWpm === undefined) return { v: PROTOCOL_VERSION, type: "join", name };
+			if (typeof skillWpm !== "number" || !Number.isFinite(skillWpm) || skillWpm < 0) return null;
+			return { v: PROTOCOL_VERSION, type: "join", name, skillWpm };
 		}
 		case "set_ready":
 		case "set_repeat":
