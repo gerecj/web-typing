@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { findErrorRanges } from "../../lib/race/error-ranges";
 import { type ClientMessage, PROTOCOL_VERSION, type ProgressReport } from "../../lib/race/protocol";
+import { recordWpm } from "../../lib/skill";
 import { isInteractiveTarget, useTyping } from "../useTyping";
 import { useRaceSocket } from "./useRaceSocket";
 
@@ -129,6 +130,17 @@ export function useRace(code: string, name: string | null) {
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isReady, isRepeatReady, phase, sendReady, sendRepeat]);
+
+	// Remember this player's result, so bots can be matched to their speed.
+	const roundId = connection.room?.roundId;
+	const resultWpm =
+		phase === "results" && currentPlayer?.place !== null ? currentPlayer?.wpm : null;
+	const recordedRoundRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!roundId || !resultWpm || recordedRoundRef.current === roundId) return;
+		recordedRoundRef.current = roundId;
+		recordWpm(resultWpm);
+	}, [resultWpm, roundId]);
 
 	return { ...connection, typing, errorRanges };
 }

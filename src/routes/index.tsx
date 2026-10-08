@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { CorpusPicker } from "../components/CorpusPicker";
 import { ModeSwitcher } from "../components/ModeSwitcher";
 import { SoloResults } from "../components/SoloResults";
@@ -12,6 +12,7 @@ import { useTyping } from "../hooks/useTyping";
 import { useTypingDebugGrid } from "../hooks/useTypingDebugGrid";
 import { useTypingSettings } from "../hooks/useTypingSettings";
 import { pickQuote } from "../lib/passages";
+import { recordWpm } from "../lib/skill";
 import {
 	CORPORA,
 	isCorpusId,
@@ -79,6 +80,11 @@ function TypingPage() {
 		textProvider: preset === "quote" ? quoteTextProvider : wordsTextProvider,
 		enabled: typingReady,
 	});
+
+	// Remember results, so race bots can be matched to this player's speed.
+	useEffect(() => {
+		if (typing.status === "finished") recordWpm(typing.wpm);
+	}, [typing.status, typing.wpm]);
 
 	return (
 		<main className="relative flex min-h-screen select-none items-center justify-center bg-(--bg) font-mono">

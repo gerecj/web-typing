@@ -11,6 +11,7 @@ import {
 	type RoomSnapshot,
 	type ServerMessage,
 } from "../../lib/race/protocol";
+import { averageWpm } from "../../lib/skill";
 
 export interface ActiveRace {
 	roundId: string;
@@ -61,6 +62,7 @@ export function useRaceSocket(code: string, name: string | null) {
 				v: PROTOCOL_VERSION,
 				type: "join",
 				name,
+				skillWpm: averageWpm(),
 			};
 			socket.send(JSON.stringify(join));
 		});

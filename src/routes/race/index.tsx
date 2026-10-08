@@ -3,7 +3,7 @@ import { type FormEvent, useState } from "react";
 import { ModeSwitcher } from "../../components/ModeSwitcher";
 import { ThemePicker } from "../../components/ThemePicker";
 import { LOBBY_CODE_LENGTH, normalizeLobbyCode } from "../../lib/race/lobby-code";
-import { MAX_PLAYER_NAME_LENGTH } from "../../lib/race/protocol";
+import { MAX_PLAYER_NAME_LENGTH, type RoomKind } from "../../lib/race/protocol";
 import { RACE_PLAYER_NAME_STORAGE_KEY } from "../../lib/race/session";
 
 export const Route = createFileRoute("/race/")({
@@ -18,7 +18,7 @@ function RaceEntryPage() {
 	});
 	const [code, setCode] = useState("");
 	const [error, setError] = useState<string | null>(null);
-	const [creating, setCreating] = useState(false);
+	const [creating, setCreating] = useState<RoomKind | null>(null);
 	const hasValidName = name.trim().length > 0;
 
 	function rememberName(): string | null {
@@ -31,20 +31,24 @@ function RaceEntryPage() {
 		return normalized;
 	}
 
-	async function createRace() {
+	async function createRace(kind: RoomKind) {
 		if (!hasValidName || !rememberName()) return;
-		setCreating(true);
+		setCreating(kind);
 		setError(null);
 		try {
-			const response = await fetch("/api/lobbies", { method: "POST" });
+			const response = await fetch("/api/lobbies", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ kind }),
+			});
 			if (!response.ok) throw new Error("Lobby creation failed");
 			const payload = (await response.json()) as { code?: unknown };
 			if (typeof payload.code !== "string") throw new Error("Lobby code missing");
 			await navigate({ to: "/race/$code", params: { code: payload.code } });
 		} catch {
-			setError("The lobby could not be created. Please try again.");
+			setError("The race could not be created. Please try again.");
 		} finally {
-			setCreating(false);
+			setCreating(null);
 		}
 	}
 
@@ -73,7 +77,7 @@ function RaceEntryPage() {
 					<p className="text-(--text-muted) text-sm">multiplayer</p>
 					<h1 className="font-bold text-(--accent) text-3xl">typing race</h1>
 					<p className="mt-2 text-(--text-muted) text-sm">
-						Create a private lobby or join friends with a code.
+						Race friends in a private lobby, or race bots that type at your speed.
 					</p>
 				</header>
 
@@ -88,18 +92,28 @@ function RaceEntryPage() {
 					/>
 				</label>
 
-				<button
-					type="button"
-					disabled={creating || !hasValidName}
-					onClick={createRace}
-					className="w-full rounded-md bg-(--accent) px-4 py-2 text-(--bg) transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-(--text-muted) disabled:opacity-40"
-				>
-					{creating ? "creating…" : "create lobby"}
-				</button>
+				<div className="grid grid-cols-2 gap-2">
+					{(
+						[
+							["friends", "create lobby"],
+							["bots", "race bots"],
+						] as const
+					).map(([kind, label]) => (
+						<button
+							key={kind}
+							type="button"
+							disabled={creating !== null || !hasValidName}
+							onClick={() => createRace(kind)}
+							className="rounded-md bg-(--accent) px-4 py-2 text-(--bg) transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-(--text-muted) disabled:opacity-40"
+						>
+							{creating === kind ? "creating…" : label}
+						</button>
+					))}
+				</div>
 
 				<div className="flex items-center gap-3 text-(--text-muted) text-xs">
 					<span className="h-px flex-1 bg-(--text-muted)/20" />
-					<span>or join</span>
+					<span>or join friends</span>
 					<span className="h-px flex-1 bg-(--text-muted)/20" />
 				</div>
 

@@ -2,6 +2,7 @@ import type { MouseEvent } from "react";
 import { controlStyles, segmentedItemClass } from "../../lib/controlStyles";
 import type { RaceSettings, RoomSnapshot } from "../../lib/race/protocol";
 import {
+	BOT_COUNT_OPTIONS,
 	CORPORA,
 	type CorpusId,
 	QUOTE_OPTIONS,
@@ -36,13 +37,21 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 
 	return (
 		<section className="w-fit max-w-[calc(100vw-2rem)] space-y-6 rounded-xl border border-(--text-muted)/20 bg-(--bg) p-6 shadow-2xl">
-			<header className="text-center">
-				<p className="text-(--text-muted) text-sm">lobby</p>
-				<h1 className="select-text font-bold text-(--accent) text-3xl tracking-[0.2em]">
-					{room.code}
-				</h1>
-				<p className="mt-2 text-(--text-muted) text-sm">Share this code or the current URL.</p>
-			</header>
+			{room.kind === "bots" ? (
+				<header className="text-center">
+					<p className="text-(--text-muted) text-sm">practice</p>
+					<h1 className="font-bold text-(--accent) text-3xl">race bots</h1>
+					<p className="mt-2 text-(--text-muted) text-sm">Bots type at around your recent speed.</p>
+				</header>
+			) : (
+				<header className="text-center">
+					<p className="text-(--text-muted) text-sm">lobby</p>
+					<h1 className="select-text font-bold text-(--accent) text-3xl tracking-[0.2em]">
+						{room.code}
+					</h1>
+					<p className="mt-2 text-(--text-muted) text-sm">Share this code or the current URL.</p>
+				</header>
+			)}
 
 			<div>
 				<div className="flex flex-wrap items-center justify-center gap-3 whitespace-nowrap">
@@ -112,6 +121,22 @@ export function LobbyPanel({ room, currentPlayerId, onReady, onSettings }: Lobby
 						>
 							punctuation
 						</button>
+					)}
+					{room.kind === "bots" && (
+						<div className={controlStyles.group}>
+							<span className="pl-2 text-(--text-muted) text-sm">bots</span>
+							{BOT_COUNT_OPTIONS.map((count) => (
+								<button
+									key={count}
+									type="button"
+									disabled={!isHost}
+									onClick={thenBlur(() => updateSettings({ botCount: count }))}
+									className={segmentedItemClass(room.settings.botCount === count)}
+								>
+									{count}
+								</button>
+							))}
+						</div>
 					)}
 				</div>
 			</div>

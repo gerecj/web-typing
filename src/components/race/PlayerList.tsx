@@ -16,7 +16,7 @@ export function PlayerList({ room, currentPlayerId }: PlayerListProps) {
 					<span className={player.connected ? "text-(--text)" : "text-(--text-muted)"}>
 						{player.name}
 						{player.id === currentPlayerId ? " (you)" : ""}
-						{player.id === room.hostPlayerId ? " · host" : ""}
+						{room.kind === "friends" && player.id === room.hostPlayerId ? " · host" : ""}
 					</span>
 					<span className={player.ready ? "text-(--accent)" : "text-(--text-muted)"}>
 						{player.connected ? (player.ready ? "ready" : "waiting") : "left race"}
